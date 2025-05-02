@@ -5,6 +5,7 @@ use utils::DefaultBehaviour;
 
 mod utils;
 mod network;
+mod game;
 
 enum Mode {
     Server,
