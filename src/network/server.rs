@@ -57,24 +57,25 @@ impl GameServer {
         let mut disconnections = Vec::new();
         
         for (index, client) in self.clients.iter_mut().enumerate() {
-            let mut buffer = [0u8; 16];
-            if let Ok(bytes_read) = client.0.read(&mut buffer) {
-                if bytes_read == 0 {
-                    disconnections.push(index);
-                } else {
-                    println!("BUFFER: {buffer:?}");
-                    let message: String = buffer
-                        .into_iter()
-                        .skip_while(|x| *x != 1)
-                        .take_while(|x| *x != 0)
-                        .map(|x| x as char)
-                        .collect();
-                        
-                    println!(">>> '{message}'");
-                    self.to_broadcast.push((message, client.1));
-                    received += 1;
-                }
+            
+            let mut buffer = Vec::<u8>::new();
+            let mut reader = BufReader::new(&client.0);
+            reader.skip_until(1).unwrap();
+            reader.read_until(0, &mut buffer).unwrap();
+                
+            if buffer.len() == 0 {
+                disconnections.push(index);
+            } else {            
+                let message = buffer
+                    .into_iter()
+                    .map(|x| x as char)
+                    .collect();
+                
+                println!(">>> '{message}'");
+                self.to_broadcast.push((message, client.1));
+                received += 1;
             }
+           
         }
         
         if received > 0 {
