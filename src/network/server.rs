@@ -1,9 +1,12 @@
 use std::net::{ SocketAddr, TcpListener, TcpStream };
 use std::io::{ Error, Read, Write };
+use std::ffi::c_void;
+
+use crate::utils::DefaultBehaviour;
 
 // Utils FFI
 unsafe extern "C" {
-    fn time() -> usize;
+    fn time(ptr: *mut c_void) -> usize;
 }
 
 type Client = (TcpStream, SocketAddr);
@@ -17,6 +20,13 @@ pub struct GameServer {
     connection_string: String
 }
 
+impl DefaultBehaviour for GameServer {
+    fn default_behaviour(&mut self) {
+        self.accept_connection();
+        self.receive_message();
+    }
+}
+
 impl GameServer {
     pub fn new(connection_string: &str) -> Result<Self, Error> {
         let listener = TcpListener::bind(connection_string)?;
@@ -28,11 +38,6 @@ impl GameServer {
             to_broadcast: Default::default(),
             connection_string: connection_string.to_string()
         })
-    }
-    
-    pub fn default_behaviour(&mut self) {
-        self.accept_connection();
-        self.receive_message();
     }
     
     pub fn accept_connection(&mut self) {
@@ -49,16 +54,27 @@ impl GameServer {
     pub fn receive_message(&mut self) {
         
         let mut received = 0;
-        for client in self.clients.iter_mut() {
+        let mut disconnections = Vec::new();
+        
+        for (index, client) in self.clients.iter_mut().enumerate() {
             let mut buffer = String::new();
-            if let Ok(_) = client.0.read_to_string(&mut buffer) {
-                self.to_broadcast.push((buffer, client.1));
-                received += 1;
+            if let Ok(bytes_read) = client.0.read_to_string(&mut buffer) {
+                if bytes_read == 0 {
+                    disconnections.push(index);
+                } else {
+                    self.to_broadcast.push((buffer, client.1));
+                    received += 1;
+                }
             }
         }
         
         if received > 0 {
             self.log(&format!("Added {received} message(s) into the broadcast queue."));
+        }
+        
+        for i in disconnections {
+            self.log(&format!("Client {} disconnected.", self.clients[i].1));
+            self.clients.remove(i);
         }
     }
     
@@ -99,16 +115,16 @@ impl GameServer {
             "[{}:{}:{}] {} > {message}",
             Self::base_format(hour, 10),
             Self::base_format(minute, 10),
-            Self::base_format(second,10),
+            Self::base_format(second, 10),
             self.connection_string
         )
     }
     
     fn hour() -> (u8, u8, u8) {
-        let unix_epoch = unsafe { time() };
+        let unix_epoch = unsafe { time(0 as *mut c_void) };
         
         (
-            ((unix_epoch / 3600) % 24) as u8,
+            ((unix_epoch / 3600 + 2) % 24) as u8,
             ((unix_epoch / 60)   % 60) as u8,
             ((unix_epoch)        % 60) as u8
         )
