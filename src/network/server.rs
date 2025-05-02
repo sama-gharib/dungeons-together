@@ -24,6 +24,7 @@ impl DefaultBehaviour for GameServer {
     fn default_behaviour(&mut self) {
         self.accept_connection();
         self.receive_message();
+        self.broadcast();
     }
 }
 
@@ -60,22 +61,20 @@ impl GameServer {
             
             let mut buffer = Vec::<u8>::new();
             let mut reader = BufReader::new(&client.0);
-            reader.skip_until(1).unwrap();
-            reader.read_until(0, &mut buffer).unwrap();
-                
-            if buffer.len() == 0 {
-                disconnections.push(index);
-            } else {            
-                let message = buffer
-                    .into_iter()
-                    .map(|x| x as char)
-                    .collect();
-                
-                println!(">>> '{message}'");
-                self.to_broadcast.push((message, client.1));
-                received += 1;
+            if let (Ok(_), Ok(_)) = (reader.skip_until(1), reader.read_until(0, &mut buffer)) {   
+                if buffer.len() == 0 {
+                    disconnections.push(index);
+                } else {            
+                    let message = buffer
+                        .into_iter()
+                        .map(|x| x as char)
+                        .collect();
+                    
+                    println!(">>> '{message}'");
+                    self.to_broadcast.push((message, client.1));
+                    received += 1;
+                }
             }
-           
         }
         
         if received > 0 {
