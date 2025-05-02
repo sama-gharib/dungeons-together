@@ -1,15 +1,20 @@
 use std::net::TcpStream;
 use std::io::{ Write, Read };
-use crate::utils::DefaultBehaviour;
 
+use macroquad::prelude::*;
+
+use crate::utils::DefaultBehaviour;
+use crate::game::Body;
 
 pub struct GameClient {
-    server: TcpStream
+    server: TcpStream,
+    player: Body
 }
 
 impl DefaultBehaviour for GameClient {
     fn default_behaviour(&mut self) {
-    
+        self.send(&format!("\u{01}{};{}\0", self.player.position.x, self.player.position.y));
+        self.receive();
     }
 }
 
@@ -19,7 +24,8 @@ impl GameClient {
         server.set_nonblocking(true)?;
         
         Ok(Self {
-            server
+            server,
+            player: Body::new(vec2(100., 100.), vec2(100., 100.))
         })
     }
     
@@ -29,7 +35,12 @@ impl GameClient {
     
     pub fn receive(&mut self) {
         let mut buffer = String::new();
-        let _ = self.server.read_to_string(&mut buffer);
-        println!("Received: {buffer}");
+        if let Ok(bytes_read) = self.server.read_to_string(&mut buffer) {
+            if bytes_read == 0 {
+                println!("Server disconnected.");
+            } else {
+                println!("Received: {buffer}");
+            }
+        }
     }
 }

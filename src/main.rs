@@ -32,8 +32,7 @@ async fn main() {
         Mode::Client => Box::new(GameClient::new("localhost:53000").unwrap())
     };
     
-    loop {
-        
+    loop {            
         s.default_behaviour();
         
         clear_background(BLACK);

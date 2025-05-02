@@ -61,8 +61,24 @@ impl Dynamic for Body {
     }
 }
 
+impl Drawable for Body {
+    fn draw(&self) {
+        draw_rectangle(self.position.x, self.position.y, self.size.x, self.size.y, WHITE);
+    }
+}
+
+
 impl Body {
-    pub fn from(p: &impl Physical) -> Self {
+    pub fn new(position: Vec2, size: Vec2) -> Self {
+        Self {
+            position,
+            size,
+            speed: Vec2::ZERO,
+            future_speed: None
+        }
+    }
+    
+    fn from(p: &impl Physical) -> Self {
         Self {
             position: p.get_position(),
             size: p.get_size(),

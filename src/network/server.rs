@@ -1,5 +1,5 @@
 use std::net::{ SocketAddr, TcpListener, TcpStream };
-use std::io::{ Error, Read, Write };
+use std::io::{ Error, Read, Write, BufRead, BufReader };
 use std::ffi::c_void;
 
 use crate::utils::DefaultBehaviour;
@@ -44,7 +44,7 @@ impl GameServer {
         if let Ok(new_client) =  self.listener.accept() {
             if let Ok(()) = new_client.0.set_nonblocking(true) {
                 self.log(&format!("New client connected : {}", new_client.1));
-                self.clients.push(new_client)
+                self.clients.push(new_client);
             } else {
                 self.log("Failed to set client non-blocking.");
             }
@@ -57,12 +57,21 @@ impl GameServer {
         let mut disconnections = Vec::new();
         
         for (index, client) in self.clients.iter_mut().enumerate() {
-            let mut buffer = String::new();
-            if let Ok(bytes_read) = client.0.read_to_string(&mut buffer) {
+            let mut buffer = [0u8; 16];
+            if let Ok(bytes_read) = client.0.read(&mut buffer) {
                 if bytes_read == 0 {
                     disconnections.push(index);
                 } else {
-                    self.to_broadcast.push((buffer, client.1));
+                    println!("BUFFER: {buffer:?}");
+                    let message: String = buffer
+                        .into_iter()
+                        .skip_while(|x| *x != 1)
+                        .take_while(|x| *x != 0)
+                        .map(|x| x as char)
+                        .collect();
+                        
+                    println!(">>> '{message}'");
+                    self.to_broadcast.push((message, client.1));
                     received += 1;
                 }
             }
