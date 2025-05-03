@@ -34,6 +34,7 @@ impl GameClient {
     }
     
     pub fn receive(&mut self) {
+        todo!(); // THIS SHOULD LOOK LIKE GameServer::receive_message
         let mut buffer = String::new();
         if let Ok(bytes_read) = self.server.read_to_string(&mut buffer) {
             if bytes_read == 0 {
