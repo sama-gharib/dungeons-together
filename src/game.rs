@@ -15,6 +15,10 @@ pub trait Dynamic {
     fn update(&mut self);
 }
 
+pub trait Controlable {
+    fn handle_events(&mut self);
+}
+
 pub trait Physical {
     fn get_position(&self) -> Vec2;
     fn get_size(&self)     -> Vec2;

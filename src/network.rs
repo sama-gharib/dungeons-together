@@ -1,11 +1,15 @@
 use macroquad::prelude::*;
 
 use std::str::FromStr;
-use std::net::{SocketAddr, TcpStream};
-use std::io::{ BufRead, BufReader, Read, Write };
+use std::net::TcpStream;
+use std::io::{ BufRead, BufReader, Write };
+
+use crate::game::{ Dynamic, Drawable, Controlable };
 
 pub mod client;
 pub mod server;
+
+pub trait GameAgent : Dynamic + Drawable + Controlable {}
 
 #[derive(Copy, Clone, Debug)]
 pub struct ShareableType<T> {

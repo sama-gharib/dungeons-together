@@ -1,13 +1,15 @@
 use macroquad::prelude::*;
 
 use std::net::{ SocketAddr, TcpListener, TcpStream };
-use std::io::Error;
+use std::io::{ Write, Error };
 use std::thread::sleep;
 use std::time::Duration;
+use std::collections::VecDeque;
 
+use crate::game::{ Controlable, Drawable, Dynamic };
 use crate::utils::{ base_format, DefaultBehaviour, Random, Time };
 
-use super::{Protocol, ProtocolError, Command};
+use super::{Command, GameAgent, Protocol, ProtocolError};
 
 #[derive(Debug)]
 struct Client {
@@ -20,14 +22,31 @@ pub struct GameServer {
     listener: TcpListener,
     clients: Vec<Client>,
     
-    to_broadcast: Vec<(Command, usize)>,
-    to_send: Vec<(Command, usize)>,
+    to_broadcast: VecDeque<(Command, usize)>,
+    to_send: VecDeque<(Command, usize)>,
     
     connection_string: String
 }
 
-impl DefaultBehaviour for GameServer {
-    fn default_behaviour(&mut self) {
+impl GameAgent for GameServer { }
+
+impl Controlable for GameServer {
+    fn handle_events(&mut self) {
+        // TODO
+    }
+}
+
+impl Drawable for GameServer {
+    fn draw(&self) {
+        draw_text("todo", 200.0, 200.0, 16.0, RED);
+    }    
+}
+
+impl Dynamic for GameServer {
+    fn update(&mut self) {
+        print!("\rbroadcast queue length: {}                        ", self.to_broadcast.len());
+        let _ = std::io::stdout().flush();
+        
         self.accept_connection();
         self.receive_message();
         self.broadcast();
@@ -36,7 +55,7 @@ impl DefaultBehaviour for GameServer {
 }
 
 impl GameServer {
-    const SOCKET_DELAY: u64 = 4;
+    const SOCKET_DELAY: u64 = 16;
     
     
     pub fn new(connection_string: &str) -> Result<Self, Error> {
@@ -61,12 +80,13 @@ impl GameServer {
                 self.log(&format!("New client connected : {}", new_id));
                 
                 for client in self.clients.iter() {
-                    self.to_send.push((Command::Spawn(client.id), new_id));
+                    self.to_send.push_back((Command::Spawn(client.id), new_id));
                 }
                   
-                self.to_broadcast.push((Command::Spawn(new_id), new_id));
+                self.to_broadcast.push_back((Command::Spawn(new_id), new_id));
                 
                 self.clients.push(Client { stream: new_client.0,  id: new_id, position: Vec2::ZERO});
+                
             } else {
                 self.log("Failed to set client non-blocking.");
             }
@@ -80,7 +100,7 @@ impl GameServer {
         for (index, client) in self.clients.iter_mut().enumerate() {
             
             match &mut Protocol::reception(&mut client.stream) {
-                Ok( command)  => {
+                Ok(command)  => {
                     let should_broadcast = match command {
                         Command::Reposition(id, position) => {
                             client.position = *position;
@@ -90,7 +110,7 @@ impl GameServer {
                         _ => true
                     };
                     if should_broadcast {
-                        self.to_broadcast.push((*command, client.id));
+                        self.to_broadcast.push_back((*command, client.id));
                     }
                 },
                 Err(e) => match e {
@@ -115,16 +135,15 @@ impl GameServer {
         
         let mut success = 0;
         let mut error = 0;
-        for (message, source) in self.to_broadcast.iter() {
+        if let Some((message, source)) = self.to_broadcast.pop_front() {
             for target in self.clients.iter_mut() {
-                if *source != target.id {
-                    if let Ok(_) = Protocol::send(&mut target.stream, *message) {
+                if source != target.id {
+                    if let Ok(_) = Protocol::send(&mut target.stream, message) {
                         success += 1;
                     } else {
                         error += 1;
                     }
                 }
-                sleep(Duration::from_millis(Self::SOCKET_DELAY));
             }
         }
         
@@ -139,22 +158,19 @@ impl GameServer {
             );
         }
         
-        self.to_broadcast.clear();
     }
 
     pub fn send(&mut self) {
-        for to_send in self.to_send.iter() {
+        if let Some((command, target)) = self.to_send.pop_front() {
             for client in self.clients.iter_mut() {
-                if to_send.1 == client.id {
-                    if let Err(e) = Protocol::send(&mut client.stream, to_send.0) {
+                if target == client.id {
+                    if let Err(e) = Protocol::send(&mut client.stream, command) {
                         println!("Failed to send a message : {e:?}");
                     }
                 }
-                sleep(Duration::from_millis(Self::SOCKET_DELAY));
             }
         }
         
-        self.to_send.clear();
     }
     
     fn log(&self, message: &str) {
