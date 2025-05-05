@@ -6,6 +6,8 @@ use macroquad::prelude::*;
 use crate::utils::DefaultBehaviour;
 use crate::game::Body;
 
+use super::{ Protocol, Command };
+
 pub struct GameClient {
     server: TcpStream,
     player: Body
@@ -13,8 +15,9 @@ pub struct GameClient {
 
 impl DefaultBehaviour for GameClient {
     fn default_behaviour(&mut self) {
-        self.send(&format!("\u{01}{};{}\0", self.player.position.x, self.player.position.y));
-        self.receive();
+        let to_send = Command::Reposition(5, vec2(10.0, 10.0));
+        let _ = Protocol::send(&mut self.server, to_send);
+        let _ = Protocol::reception(&mut self.server);
     }
 }
 
@@ -29,19 +32,4 @@ impl GameClient {
         })
     }
     
-    pub fn send(&mut self, msg: &str) {
-        let _ = self.server.write_all(msg.as_bytes());
-    }
-    
-    pub fn receive(&mut self) {
-        todo!(); // THIS SHOULD LOOK LIKE GameServer::receive_message
-        let mut buffer = String::new();
-        if let Ok(bytes_read) = self.server.read_to_string(&mut buffer) {
-            if bytes_read == 0 {
-                println!("Server disconnected.");
-            } else {
-                println!("Received: {buffer}");
-            }
-        }
-    }
 }

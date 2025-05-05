@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 
 use std::str::FromStr;
 use std::net::TcpStream;
-use std::io::{ Read, BufRead, BufReader };
+use std::io::{ BufRead, BufReader, Read, Write };
 
 pub mod client;
 pub mod server;
@@ -13,7 +13,7 @@ pub struct ShareableType<T> {
 }
 
 impl <T: FromStr> ShareableType<T> {
-    const SEPARATOR: u8 = 47; // Slash
+    pub const SEPARATOR: u8 = 47; // Slash
     
     pub fn parse<'a>(i: &mut impl Iterator<Item=&'a u8>) -> Result<T, FormatError> {
         if let Ok(v) = Self::extract_next_field(i).parse::<T>() {
@@ -35,13 +35,13 @@ impl <T: FromStr> ShareableType<T> {
                 buffer.push(s as char);
             }
         }
-        
+                
         buffer
     }
 }
 
 
-
+#[derive(Copy, Clone, Debug)]
 pub enum FormatError {
     EmptyMessage,
     MissingField,
@@ -50,6 +50,7 @@ pub enum FormatError {
     ByteAfterEnd
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum Command {
     Spawn (usize),
     Reposition (usize, Vec2),
@@ -84,6 +85,39 @@ impl From<&[u8]> for Command {
     }
 }
 
+impl Command {
+    pub fn as_bytes(&self) -> Vec<u8>{        
+        let separator: u8 = ShareableType::<u8>::SEPARATOR;
+        
+        let (header, body) = match self {
+            Command::Spawn(id) => (2u8, Vec::from(id.to_string().as_bytes())),
+            Command::Reposition(id, pos) => (
+                3,
+                id
+                    .to_string()
+                    .as_bytes()
+                    .into_iter()
+                    .chain(&[separator])
+                    .chain(
+                        pos.x
+                            .to_string()
+                            .as_bytes()
+                    )
+                    .chain(&[separator])
+                    .chain(pos.y.to_string().as_bytes())
+                    .map(|x| *x)
+                    .collect()
+            ),
+            Command::EndGame => (4, Vec::new()),
+            Command::IllFormated(_) => (5, Vec::new()),
+            Command::Unknown => (6, Vec::new())
+        };
+        
+        [header].into_iter().chain(body.into_iter()).collect::<Vec<u8>>() 
+    }
+}
+
+#[derive(Debug)]
 pub enum ProtocolError {
     Disconnection,
     WrongSequence
@@ -91,17 +125,28 @@ pub enum ProtocolError {
 
 pub struct Protocol;
 impl Protocol {
-    pub fn reception(stream: &mut TcpStream) -> Result<Command, ProtocolError>{
+    pub fn reception(stream: &mut TcpStream) -> Result<Command, ProtocolError> {
         let mut buffer = Vec::<u8>::new();
         let mut reader = BufReader::new(stream);
         if let (Ok(_), Ok(_)) = (reader.skip_until(1), reader.read_until(0, &mut buffer)) {   
+            println!("Received raw: {buffer:?}");
             if buffer.len() == 0 {
                 return Err(ProtocolError::Disconnection)
             } else {            
-                return Ok(Command::from(&buffer[..]));
+                return Ok(Command::from(&buffer[..buffer.len()-1]));
             }
         } else {
             Err(ProtocolError::WrongSequence)
         }
+    }
+    
+    pub fn send(stream: &mut TcpStream, command: Command) -> Result<(), std::io::Error> {
+        let message = [1]
+                .into_iter()
+                .chain(command.as_bytes())
+                .chain([0])
+                .collect::<Vec<u8>>();
+        println!("Sending raw: {message:?}");
+        stream.write_all(&message)
     }
 }

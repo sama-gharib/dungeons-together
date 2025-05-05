@@ -4,6 +4,8 @@ use std::ffi::c_void;
 
 use crate::utils::DefaultBehaviour;
 
+use super::{Protocol, ProtocolError, Command};
+
 // Utils FFI
 unsafe extern "C" {
     fn time(ptr: *mut c_void) -> usize;
@@ -15,7 +17,7 @@ pub struct GameServer {
     listener: TcpListener,
     clients: Vec<Client>,
     
-    to_broadcast: Vec<(String, SocketAddr)>,
+    to_broadcast: Vec<(Command, SocketAddr)>,
 
     connection_string: String
 }
@@ -59,20 +61,19 @@ impl GameServer {
         
         for (index, client) in self.clients.iter_mut().enumerate() {
             
-            let mut buffer = Vec::<u8>::new();
-            let mut reader = BufReader::new(&client.0);
-            if let (Ok(_), Ok(_)) = (reader.skip_until(1), reader.read_until(0, &mut buffer)) {   
-                if buffer.len() == 0 {
-                    disconnections.push(index);
-                } else {            
-                    let message = buffer
-                        .into_iter()
-                        .map(|x| x as char)
-                        .collect();
-                    
-                    println!(">>> '{message}'");
-                    self.to_broadcast.push((message, client.1));
+            match Protocol::reception(&mut client.0) {
+                Ok(command)  => {
+                    self.to_broadcast.push((command, client.1));
                     received += 1;
+                    // println!("\t{command:?}");
+                },
+                Err(e) => match e {
+                    ProtocolError::Disconnection => {
+                        disconnections.push(index);
+                    },
+                    ProtocolError::WrongSequence => {
+                        todo!()
+                    }
                 }
             }
         }
@@ -94,7 +95,7 @@ impl GameServer {
         for (message, source) in self.to_broadcast.iter() {
             for (stream, target) in self.clients.iter_mut() {
                 if *source != *target {
-                    if let Ok(_) = stream.write_all(message.as_bytes()) {
+                    if let Ok(_) = Protocol::send(stream, *message) {
                         success += 1;
                     } else {
                         error += 1;
