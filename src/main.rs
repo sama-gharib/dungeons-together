@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
-use network::{client::GameClient, server::GameServer};
-use utils::DefaultBehaviour;
+use network::{ client::GameClient, server::GameServer};
+use utils::{ Random, DefaultBehaviour };
 
 mod utils;
 mod network;
@@ -14,9 +14,10 @@ enum Mode {
 
 #[macroquad::main("Bored")]
 async fn main() {
-    // Testing server
     
-    let mut args: Vec<_> = std::env::args().collect();
+    Random::seed();
+    
+    let args: Vec<_> = std::env::args().collect();
 
     let mode = match args.get(1) {
        Some(argument) => match &argument[..]{
@@ -33,11 +34,12 @@ async fn main() {
     };
     
     loop {            
-        s.default_behaviour();
-        
         clear_background(BLACK);
         draw_text("Work in progress.", 100., 100., 32., WHITE);
+        
+        s.default_behaviour();
         
         next_frame().await;
     }
 }
+

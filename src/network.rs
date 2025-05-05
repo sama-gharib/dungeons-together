@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 use std::str::FromStr;
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::io::{ BufRead, BufReader, Read, Write };
 
 pub mod client;
@@ -129,10 +129,9 @@ impl Protocol {
         let mut buffer = Vec::<u8>::new();
         let mut reader = BufReader::new(stream);
         if let (Ok(_), Ok(_)) = (reader.skip_until(1), reader.read_until(0, &mut buffer)) {   
-            println!("Received raw: {buffer:?}");
             if buffer.len() == 0 {
                 return Err(ProtocolError::Disconnection)
-            } else {            
+            } else {          
                 return Ok(Command::from(&buffer[..buffer.len()-1]));
             }
         } else {
@@ -146,7 +145,6 @@ impl Protocol {
                 .chain(command.as_bytes())
                 .chain([0])
                 .collect::<Vec<u8>>();
-        println!("Sending raw: {message:?}");
         stream.write_all(&message)
     }
 }
