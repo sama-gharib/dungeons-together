@@ -79,10 +79,9 @@ impl Dynamic for GameClient {
 
 impl Drop for GameClient {
     fn drop(&mut self) {
-        println!("Trying to drop client...");
+        let _ = self.to_send.borrow_mut().lock().unwrap().push(Command::Despawn(0));
         (*self.running.borrow_mut().lock().unwrap()) = false;
         let _ = std::mem::replace(&mut self.network_thread, std::thread::spawn(|| {1;})).join();
-        println!("Dropped client !");
     }
 }
 
@@ -122,15 +121,17 @@ impl GameClient {
         let mut server = TcpStream::connect(connection_string).unwrap();
         server.set_nonblocking(true).unwrap();
         
+        let mut protocol = Protocol::new();
+        
         loop {
             // Reception
-            if let Ok(command) = Protocol::reception(&mut server) {
+            if let Ok(command) = protocol.reception(&mut server) {
                 inbox.borrow_mut().lock().unwrap().push(command);
             }
             
             // Sending
             if let Some(to_send) = to_send.borrow_mut().lock().unwrap().pop() {
-                let _ = Protocol::send(&mut server, to_send);
+                let _ = protocol.send(&mut server, to_send);
             }
             
             // End of thread condition
@@ -152,7 +153,9 @@ impl GameClient {
                     other.x = pos.x;
                     other.y = pos.y;
                 },
-                Command::EndGame => todo!(),
+                Command::Despawn(id) => {
+                    self.others.remove(&id);
+                },
                 Command::Unknown => todo!(),
                 Command::IllFormated(_) => todo!()
             }

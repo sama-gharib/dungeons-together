@@ -15,7 +15,8 @@ use super::{Command, GameAgent, Protocol, ProtocolError};
 struct Client {
     stream: TcpStream,
     id: usize,
-    position: Vec2
+    position: Vec2,
+    protocol: Protocol
 }
 
 pub struct GameServer {
@@ -85,7 +86,7 @@ impl GameServer {
                   
                 self.to_broadcast.push_back((Command::Spawn(new_id), new_id));
                 
-                self.clients.push(Client { stream: new_client.0,  id: new_id, position: Vec2::ZERO});
+                self.clients.push(Client { stream: new_client.0,  id: new_id, position: Vec2::ZERO, protocol: Protocol::new()});
                 
             } else {
                 self.log("Failed to set client non-blocking.");
@@ -99,13 +100,18 @@ impl GameServer {
         
         for (index, client) in self.clients.iter_mut().enumerate() {
             
-            match &mut Protocol::reception(&mut client.stream) {
+            match &mut client.protocol.reception(&mut client.stream) {
                 Ok(command)  => {
                     let should_broadcast = match command {
                         Command::Reposition(id, position) => {
                             client.position = *position;
                             *id = client.id;
                             true
+                        },
+                        Command::Despawn(id) => {
+                            *id = client.id;
+                            disconnections.push(*id);
+                            true  
                         },
                         _ => true
                     };
@@ -115,6 +121,7 @@ impl GameServer {
                 },
                 Err(e) => match e {
                     ProtocolError::Disconnection => {
+                        self.to_broadcast.push_back((Command::Despawn(client.id), client.id));
                         disconnections.push(index);
                     },
                     ProtocolError::WrongSequence => {
@@ -138,7 +145,7 @@ impl GameServer {
         if let Some((message, source)) = self.to_broadcast.pop_front() {
             for target in self.clients.iter_mut() {
                 if source != target.id {
-                    if let Ok(_) = Protocol::send(&mut target.stream, message) {
+                    if let Ok(_) = target.protocol.send(&mut target.stream, message) {
                         success += 1;
                     } else {
                         error += 1;
@@ -164,13 +171,13 @@ impl GameServer {
         if let Some((command, target)) = self.to_send.pop_front() {
             for client in self.clients.iter_mut() {
                 if target == client.id {
-                    if let Err(e) = Protocol::send(&mut client.stream, command) {
+                    if let Err(e) = client.protocol.send(&mut client.stream, command) {
                         println!("Failed to send a message : {e:?}");
                     }
+                    break;
                 }
             }
         }
-        
     }
     
     fn log(&self, message: &str) {

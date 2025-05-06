@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 
 use std::str::FromStr;
 use std::net::TcpStream;
-use std::io::{ BufRead, BufReader, Write };
+use std::io::{ BufRead, BufReader, Error, ErrorKind, Read, Write };
 
 use crate::game::{ Dynamic, Drawable, Controlable };
 
@@ -58,7 +58,7 @@ pub enum FormatError {
 pub enum Command {
     Spawn (usize),
     Reposition (usize, Vec2),
-    EndGame,
+    Despawn(usize),
     Unknown,
     IllFormated (FormatError)
 }
@@ -80,7 +80,10 @@ impl From<&[u8]> for Command {
                         (_, Err(e1), _) => Command::IllFormated(e1),
                         (_, _, Err(e2)) => Command::IllFormated(e2)
                     },
-                    4 => Command::EndGame,
+                    4 => match ShareableType::<usize>::parse(&mut iterator) {
+                        Ok(id) => Command::Despawn(id),
+                        Err(e) => Command::IllFormated(e)
+                    },
                     _ => Command::Unknown
                 }
             },
@@ -112,7 +115,15 @@ impl Command {
                     .map(|x| *x)
                     .collect()
             ),
-            Command::EndGame => (4, Vec::new()),
+            Command::Despawn(id) => (
+                4,
+                id
+                    .to_string()
+                    .as_bytes()
+                    .into_iter()
+                    .map(|x| *x)
+                    .collect()
+            ),
             Command::IllFormated(_) => (5, Vec::new()),
             Command::Unknown => (6, Vec::new())
         };
@@ -127,28 +138,82 @@ pub enum ProtocolError {
     WrongSequence
 }
 
-pub struct Protocol;
+#[derive(Debug)]
+pub struct Protocol {
+    last_reception: [u8; 4],
+    last_send: [u8; 4]
+}
+
 impl Protocol {
-    pub fn reception(stream: &mut TcpStream) -> Result<Command, ProtocolError> {
-        let mut buffer = Vec::<u8>::new();
-        let mut reader = BufReader::new(stream);
-        if let (Ok(_), Ok(_)) = (reader.skip_until(1), reader.read_until(0, &mut buffer)) {   
-            if buffer.len() == 0 {
-                return Err(ProtocolError::Disconnection)
-            } else {          
-                return Ok(Command::from(&buffer[..buffer.len()-1]));
-            }
-        } else {
-            Err(ProtocolError::WrongSequence)
+    pub fn new() -> Self {
+        Self {
+            last_reception: [0; 4],
+            last_send: [0; 4]
         }
     }
     
-    pub fn send(stream: &mut TcpStream, command: Command) -> Result<(), std::io::Error> {
+    pub fn reception(&mut self, stream: &mut TcpStream) -> Result<Command, ProtocolError> {
+        let mut timestamp_buffer = [0u8;4];
+        let mut body_buffer = Vec::<u8>::new();
+        let mut reader = BufReader::new(stream);
+        match (reader.skip_until(1), reader.read_exact(&mut timestamp_buffer), reader.read_until(0, &mut body_buffer)) {   
+            (Ok(_), Ok(_), Ok(_)) => 
+                if Self::lower_4_bytes(&self.last_reception, &timestamp_buffer) {
+                    self.last_reception = timestamp_buffer;
+                    if body_buffer.len() == 0 {
+                        return Err(ProtocolError::Disconnection)
+                    } else {   
+                        return Ok(Command::from(&body_buffer[..body_buffer.len()-1]));
+                    }
+                } else {
+                    Err(ProtocolError::WrongSequence)
+                },
+            (_, Err(e), _) => {
+                if let ErrorKind::UnexpectedEof = e.kind() {
+                    Err(ProtocolError::Disconnection)
+                } else {
+                    Err(ProtocolError::WrongSequence)
+                }
+            },
+            (_, _, _) => Err(ProtocolError::WrongSequence)
+        } 
+    }
+    
+    pub fn send(&mut self, stream: &mut TcpStream, command: Command) -> Result<(), std::io::Error> {
         let message = [1]
                 .into_iter()
+                .chain(self.last_send)
                 .chain(command.as_bytes())
                 .chain([0])
                 .collect::<Vec<u8>>();
+        
+        Self::increment_4_bytes(&mut self.last_send);
+        
         stream.write_all(&message)
+    }
+    
+    fn lower_4_bytes(a: &[u8; 4], b: &[u8; 4]) -> bool {
+        for i in 0..4 {
+            if a[i] < b[i] {
+                return true;
+            } else if a[i] > b[i] {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    fn increment_4_bytes(target: &mut [u8;4]) {
+        for i in (0..4).rev() {
+            if !Self::increment_byte(&mut target[i]) {
+                break;
+            }
+        }
+    }
+    
+    fn increment_byte(target: &mut u8) -> bool {
+        *target = (*target + 1) % u8::MAX;
+        
+        *target == 0
     }
 }

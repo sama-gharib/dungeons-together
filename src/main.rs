@@ -33,7 +33,7 @@ async fn main() {
     };
     
     let mut s: Arc<Mutex<dyn GameAgent + Send>> = match mode {
-        Mode::Server => Arc::new(Mutex::new(GameServer::new("localhost:53000").unwrap())),
+        Mode::Server => Arc::new(Mutex::new(GameServer::new("0.0.0.0:53000").unwrap())),
         Mode::Client => Arc::new(Mutex::new(GameClient::new("localhost:53000").unwrap()))
     };
     
