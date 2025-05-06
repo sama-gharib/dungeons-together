@@ -135,7 +135,9 @@ impl Command {
 #[derive(Debug)]
 pub enum ProtocolError {
     Disconnection,
-    WrongSequence
+    WrongSequence,
+    OutdatedPackage,
+    IllFormatedSequenceNumber
 }
 
 #[derive(Debug)]
@@ -166,13 +168,13 @@ impl Protocol {
                         return Ok(Command::from(&body_buffer[..body_buffer.len()-1]));
                     }
                 } else {
-                    Err(ProtocolError::WrongSequence)
+                    Err(ProtocolError::OutdatedPackage)
                 },
             (_, Err(e), _) => {
                 if let ErrorKind::UnexpectedEof = e.kind() {
                     Err(ProtocolError::Disconnection)
                 } else {
-                    Err(ProtocolError::WrongSequence)
+                    Err(ProtocolError::IllFormatedSequenceNumber)
                 }
             },
             (_, _, _) => Err(ProtocolError::WrongSequence)

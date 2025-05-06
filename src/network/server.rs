@@ -124,6 +124,12 @@ impl GameServer {
                         self.to_broadcast.push_back((Command::Despawn(client.id), client.id));
                         disconnections.push(index);
                     },
+                    ProtocolError::OutdatedPackage => {
+                        // TODO  
+                    },
+                    ProtocolError::IllFormatedSequenceNumber => {
+                        // TODO  
+                    },
                     ProtocolError::WrongSequence => {
                         // TODO
                     }
