@@ -1,5 +1,7 @@
 use std::ffi::c_void;
 
+use macroquad::math::Vec2;
+
 unsafe extern "C" {
     fn srand(seed: usize);
     fn rand() -> usize;
@@ -48,6 +50,7 @@ impl Random {
 pub trait DefaultBehaviour {
     fn default_behaviour(&mut self);
 }
+
 
 pub fn base_format(n: u8, base: u8) -> String {
     format!("{}{}", (n/base)%base, n%base)

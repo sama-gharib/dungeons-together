@@ -150,8 +150,10 @@ impl GameClient {
                     self.others.insert(id, Rect { x: 100.0, y: 100.0, w: 100.0, h: 100.0 });
                 },
                 Command::Reposition(id, pos) => if let Some(other) = self.others.get_mut(&id) {
-                    other.x = pos.x;
-                    other.y = pos.y;
+                    let before = other.point();
+                    let after = before + (pos - before) / 4.0;
+                    other.x = after.x;
+                    other.y = after.y;
                 },
                 Command::Despawn(id) => {
                     self.others.remove(&id);

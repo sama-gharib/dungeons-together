@@ -8,6 +8,7 @@ use network::GameAgent;
 
 mod utils;
 mod network;
+mod ui;
 mod game;
 
 enum Mode {
@@ -62,4 +63,5 @@ async fn main() {
         next_frame().await;
     }
 }
+
 
