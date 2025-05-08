@@ -152,7 +152,9 @@ async fn default_game(mode: Mode) {
     
     *(should_stop.borrow_mut().lock().unwrap()) = true;
     
-    backend_thread.join().unwrap();
+    if let Err(e) = backend_thread.join() {
+        println!("Failed to join backend thread : {e:?}");
+    }
     
 }
 

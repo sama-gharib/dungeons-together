@@ -40,6 +40,10 @@ impl Controlable for GameServer {
 impl Drawable for GameServer {
     fn draw(&self) {
         draw_text("todo", 200.0, 200.0, 16.0, RED);
+        
+        for client in self.clients.iter() {
+            draw_rectangle(client.position.x, client.position.y, 100.0, 100.0, BLUE);
+        }
     }    
 }
 

@@ -193,7 +193,6 @@ impl Widget {
             h: size_prop.y
         };
         
-        println!("{:?}", self.absolute);
         
         for child in self.children.iter_mut() {
             child.recalculate_absolutes(pos_prop + size_prop / 2.0, size_prop);
