@@ -111,7 +111,9 @@ async fn default_game(mode: Mode) {
         let mut s = Arc::clone(&s);
         move || {
             loop {
-                s.borrow_mut().lock().unwrap().update();
+                let mut s = s.borrow_mut().lock().unwrap();
+                s.update();
+                drop(s);
                 
                 sleep(Duration::from_millis(8));
                 if *should_stop.borrow_mut().lock().unwrap() {

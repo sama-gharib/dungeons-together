@@ -1,5 +1,5 @@
 use std::borrow::BorrowMut;
-use std::net::TcpStream;
+use std::net::{IpAddr, SocketAddr, SocketAddrV4, TcpStream};
 use std::collections::HashMap;
 use std::sync::{ Mutex, Arc };
 use std::time::Duration;
@@ -97,8 +97,14 @@ impl GameClient {
             let inbox = inbox.clone();
             let to_send = to_send.clone();
             let running = running.clone();
+            let address: SocketAddr = connection_string.parse().unwrap();
+            let server = TcpStream::connect_timeout(
+                &address,
+                Duration::from_secs(2)
+            )
+            .unwrap();
             
-            std::thread::spawn(move || Self::network_worker(connection_string, inbox, to_send, running))
+            std::thread::spawn(move || Self::network_worker(server, inbox, to_send, running))
         };
         
         Ok(Self {
@@ -113,17 +119,18 @@ impl GameClient {
     }
     
     fn network_worker(
-        connection_string: String,
+        mut server: TcpStream,
         mut inbox: Arc<Mutex<Vec<Command>>>,
         mut to_send: Arc<Mutex<Vec<Command>>>,
         mut running: Arc<Mutex<bool>>
     ) {
-        let mut server = TcpStream::connect(connection_string).unwrap();
+        
         server.set_nonblocking(true).unwrap();
         
         let mut protocol = Protocol::new();
         
         loop {
+            println!("A");
             // Reception
             if let Ok(command) = protocol.reception(&mut server) {
                 inbox.borrow_mut().lock().unwrap().push(command);
