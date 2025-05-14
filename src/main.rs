@@ -6,7 +6,7 @@ use macroquad::prelude::*;
 use network::{ client::GameClient, server::GameServer};
 use utils::Random;
 use network::GameAgent;
-use ui::{Widget, Action};
+use ui::{Layout, Activation, Widget, WidgetData, ButtonState};
 
 mod utils;
 mod network;
@@ -29,37 +29,58 @@ async fn main() {
     
     Random::seed();
     
-    let menu_button_text = Widget::default_label()
-        .with_primary(BLACK)
-        .with_secondary(DARKGRAY);
-    
-    let menu_button= Widget::default_button()
-        .with_primary(DARKGRAY)
-        .with_secondary(GRAY);
-    
-    let mut ui = Widget::default()
-        .with_name("bg")
-        .with_children(&mut [
-            Widget::default_label()
-                .with_name("Bored")
-                .with_center(vec2(0.0, -0.4))
-                .with_size(vec2(0.8, 0.15)),
-            menu_button.clone()
-                .with_id(000)
-                .with_center(vec2(0.0, -0.1))
-                .with_children(&mut [menu_button_text.clone().with_name("Join")]),
-            menu_button.clone()
-                .with_id(111)
-                .with_center(vec2(0.0, 0.05))
-                .with_children(&mut [menu_button_text.clone().with_name("Host")]),
-            menu_button.clone()
-                .with_id(999)
-                .with_name("Quit button")
-                .with_center(vec2(0.0, 0.2))
-                .with_children(&mut [menu_button_text.clone().with_id(555).with_name("Quit")]),
-        ]);
+    let mut ui = Widget::new(WidgetData::Frame { outline: 0.0 })
+        .with_primary(WHITE)
+        .with_relative(
+            Layout {
+                center: vec2(400.0, 300.0),
+                scale: vec2(800.0, 600.0)
+            }
+        )
+        .with_child(
+            Widget::new(WidgetData::Frame { outline: 0.0 })
+                .with_relative(
+                    Layout {
+                        center: vec2(0., 0.),
+                        scale: vec2(0.5, 0.8)
+                    }
+                )
+                .with_child(
+                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
+                        .with_id("join")
+                        .with_primary(WHITE)
+                        .with_relative(
+                            Layout {
+                                center: vec2(0., -0.26),
+                                scale: vec2(0.4, 0.2)
+                            }
+                        )
+                )
+                .with_child(
+                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
+                        .with_id("host")
+                        .with_primary(WHITE)
+                        .with_relative(
+                            Layout {
+                                center: vec2(0., -0.01),
+                                scale: vec2(0.4, 0.2)
+                            }
+                        )
+                )
+                .with_child(
+                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
+                        .with_id("quit")
+                        .with_primary(WHITE)
+                        .with_relative(
+                            Layout {
+                                center: vec2(0., 0.24),
+                                scale: vec2(0.4, 0.2)
+                            }
+                        )
+                )
+        );
 
-    ui.recalculate_absolutes(vec2(400.0, 300.0), vec2(800.0, 600.0));
+    ui.update_absolutes();
     
     'app: loop {
         let state;
@@ -70,14 +91,7 @@ async fn main() {
             
             for activation in ui.get_activations() {
                 println!("{:?}", activation);
-                if let Action::Activate = activation.get_action() {
-                    state = match activation.get_source() {
-                        000 => AppState::Joining,
-                        111 => AppState::Hosting,
-                        _  => AppState::Finished
-                    };
-                    break 'menu;
-                } 
+                
             }
             
             ui.draw();
@@ -91,12 +105,12 @@ async fn main() {
             AppState::Joining  => Mode::Client
         };
         
-        default_game(mode).await;
+        // default_game(mode).await;
         
     }
     
 }
-
+/*
 async fn default_game(mode: Mode) {
     
     let mut s: Arc<Mutex<dyn GameAgent + Send>> = match mode {
@@ -160,3 +174,4 @@ async fn default_game(mode: Mode) {
     
 }
 
+*/

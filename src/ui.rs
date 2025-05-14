@@ -1,286 +1,278 @@
 use macroquad::prelude::*;
 
-use crate::utils::Random;
-use crate::game::Drawable;
+use std::ops::Mul;
 
+pub mod text_input;
 pub mod button;
 pub mod label;
+pub mod frame;
 
-pub type Id = usize;
+// ==================== Data structures ==========================
 
-#[derive(Clone, Debug)]
-pub enum Action {
-    Toggle,
-    Input (String),
-    Press,
-    Release,
-    Activate,
-    Hover,
-    None,
-    Dummy
-}
 
-#[derive(Debug)]
-pub struct Activation {
-    source: Id,
-    action: Action
-}
-impl Activation {
-    pub fn get_source(&self) -> usize {
-        self.source
-    }
-    
-    pub fn get_action(&self) -> Action {
-        self.action.clone()
-    }
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Layout {
-    center: Vec2,
-    size: Vec2
+    pub center: Vec2,
+    pub scale: Vec2
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
+pub struct Activation {
+   id: String,
+   message: Option<String>
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ButtonState {
+    Rest,
+    Hovered,
+    Pressed
+}
+
+pub enum WidgetData {
+    Frame { outline: f32 },
+    Button { state: ButtonState },
+    Label { text: String, font_size: f32 },
+    TextInput { placeholder: String, input: String, selected: bool }
+}
+
 pub struct Widget {
-    id: Id,
-    name: String,
+    id: String,
+    
+    data: WidgetData,
+    
+    absolute: Layout,
+    relative: Layout,
     
     primary: Color,
     secondary: Color,
     
-    relative: Layout,
-    absolute: Rect,
-    
-    background: fn(&Self),
-    foreground: fn(&Self),
-    
-    on_mouse_enter: fn(&mut Self),
-    on_mouse_exit: fn(&mut Self),
-    on_mouse_press: fn(&mut Self) -> Activation,
-    on_mouse_release: fn(&mut Self) -> Activation,
-    on_click: fn(&mut Self) -> Activation,
-    
-    mouse_in: bool,
-    held: bool,
-    
     children: Vec<Self>
 }
 
-impl Drawable for Widget {
-    fn draw(&self) {
-        (self.background)(self);
-        (self.foreground)(self);
-        
-        for child in self.children.iter() {
-            child.draw();
+pub struct UiIterator<'a> {
+    stack: Vec<&'a Widget>
+}
+
+// ================ Implementations ===========================
+
+impl Layout {     
+    pub fn new(center: Vec2, scale: Vec2) -> Self {
+        Self {
+            center,
+            scale
+        }
+    }
+    
+    pub fn as_rect(&self) -> Rect {
+        Rect {
+            x: self.center.x - self.scale.x / 2.0,
+            y: self.center.y - self.scale.y / 2.0,
+            w: self.scale.x,
+            h: self.scale.y,
         }
     }
 }
 
-impl Default for Widget {
-    fn default() -> Self {
-        Self {
-            id: Random::any(),
-            name: String::new(),
-            primary: WHITE,
-            secondary: BLACK,
-            relative: Layout { center: Vec2::ZERO, size: Vec2::ONE },
-            absolute: Rect { x: 0.0, y: 0.0, w: 1.0, h: 1.0 },
-            background: default_background,
-            foreground: default_foreground,
-            on_mouse_enter: nothing,
-            on_mouse_exit: nothing,
-            on_mouse_press: nothing_masking,
-            on_mouse_release: nothing_masking,
-            on_click: default_click_callback,
-            mouse_in: false,
-            held: false,
-            children: Vec::new()
+impl Activation {
+    pub fn with_message(mut self, message: &str) -> Self {
+        self.message = Some(message.to_string());
+        self
+    }
+}
+
+impl WidgetData {
+    fn check_activation(&mut self, id: &str, layout: Layout) -> Option<Activation> {
+        match self {
+            WidgetData::Frame { .. } => Self::activate_frame(),
+            WidgetData::Label { .. } => Self::activate_label(),
+            WidgetData::Button { state, .. } => Self::activate_button(id, layout, state),
+            WidgetData::TextInput { input, selected, .. } => Self::activate_text_input(id, input, selected)
+        }
+    }
+    
+    fn draw(&self, layout: Layout, primary: Color, secondary: Color) {
+        match self {
+            WidgetData::Frame { outline } =>
+                Self::draw_frame(layout, primary, secondary, *outline),
+            WidgetData::Label { text, font_size } =>
+                Self::draw_label(layout, primary, text, *font_size),
+            WidgetData::Button { state, .. } =>
+                Self::draw_button(layout, primary, secondary, *state),
+            WidgetData::TextInput { placeholder, input, selected } =>
+                Self::draw_text_input(layout, primary, secondary, placeholder, input, selected)
         }
     }
 }
 
 impl Widget {
+    // === Constructor ===
+    // == Classic ==
+    pub fn new(data: WidgetData) -> Self {
+        Self {
+            data,
+            ..Default::default()
+        }
+    }
     
-    pub fn with_id(mut self, id: usize) -> Self {
-        self.id = id;
+    // == Builders ==
+    pub fn with_id(mut self, id: &str) -> Self {
+        self.id = id.to_owned();
         self
     }
     
-    pub fn with_name(mut self, name: &str) -> Self {
-        self.name = name.to_owned();
+    pub fn with_relative(mut self, relative: Layout) -> Self {
+        self.relative = relative;
         self
     }
     
     pub fn with_primary(mut self, color: Color) -> Self {
         self.primary = color;
-        self    
+        self
     }
     
     pub fn with_secondary(mut self, color: Color) -> Self {
         self.secondary = color;
-        self    
-    }
-    
-    pub fn with_center(mut self, center: Vec2) -> Self {
-        self.relative.center = center;
         self
     }
     
-    pub fn with_size(mut self, size: Vec2) -> Self {
-        self.relative.size = size;
+    pub fn with_child(mut self, child: Self) -> Self {
+        self.children.push(child);
         self
     }
     
-    pub fn with_mouse_press_callback(mut self, callback: fn(&mut Self) -> Activation) -> Self {
-        self.on_mouse_press = callback;
-        self
+    // === Recursives ===
+    
+    // == Gates ==
+    pub fn update_absolutes(&mut self) {
+        self.recursive_absolute_update(None);
     }
     
-    pub fn with_mouse_release_callback(mut self, callback: fn(&mut Self) -> Activation) -> Self {
-        self.on_mouse_release = callback;
-        self
-    }
-    
-    pub fn with_mouse_enter_callback(mut self, callback: fn(&mut Self)) -> Self {
-        self.on_mouse_enter = callback;
-        self
-    }
-    
-    pub fn with_click_callback(mut self, callback: fn(&mut Self) -> Activation) -> Self {
-        self.on_click = callback;
-        self
-    }
-    
-    pub fn with_mouse_exit_callback(mut self, callback: fn(&mut Self)) -> Self {
-        self.on_mouse_exit = callback;
-        self
-    }
-    
-    pub fn with_background(mut self, callback: fn(&Self)) -> Self {
-        self.background = callback;
-        self
-    }
-    
-    pub fn with_foreground(mut self, callback: fn(&Self)) -> Self {
-        self.foreground = callback;
-        self
-    }
-    
-    pub fn with_children(mut self, children: &mut [Self]) -> Self {
-        self.children = children
-            .iter_mut()
-            .map(|x| std::mem::take(x))
-            .collect();
-        self
-    }
-    
-    pub fn recalculate_absolutes(&mut self, ref_center: Vec2, ref_size: Vec2) {
-        let size_prop = vec2(
-            ref_size.x * self.relative.size.x,
-            ref_size.y * self.relative.size.y  
-        );
-        let pos_prop = vec2(
-            ref_center.x + self.relative.center.x * ref_size.x - size_prop.x / 2.0,
-            ref_center.y + self.relative.center.y * ref_size.y - size_prop.y / 2.0
-        );
+    // == Bodies ==
+    fn recursive_absolute_update(&mut self, parent_absolute: Option<Layout>) {
+        self.absolute = parent_absolute.unwrap_or_default() * self.relative;
         
-        self.absolute = Rect {
-            x: pos_prop.x,
-            y: pos_prop.y,
-            w: size_prop.x,
-            h: size_prop.y
-        };
-        
+        if let WidgetData::Label{ font_size, text} = &mut self.data {
+            let measures = measure_text(&text, None, *font_size as u16, 1.0);
+            
+            if measures.width > self.absolute.scale.x {
+                *font_size *= self.absolute.scale.x / measures.width;
+            }
+            if measures.height > self.absolute.scale.y {
+                *font_size *= self.absolute.scale.y / measures.height;
+            }
+        }
         
         for child in self.children.iter_mut() {
-            child.recalculate_absolutes(pos_prop + size_prop / 2.0, size_prop);
+            child.recursive_absolute_update(Some(self.absolute))
         }
     }
     
     pub fn get_activations(&mut self) -> Vec<Activation> {
-        let mut activations: Vec<_> = self.children
-            .iter_mut()
-            .map(|child| child.get_activations())
-            .flatten()
-            .filter(|x| if let Action::None = x.action { false } else { true })
-            .collect();
         
+        let mut activations = Vec::new();
         
-        let mut mouse_released = false;
-        if is_mouse_button_released(MouseButton::Left) && self.held {
-            mouse_released = true;
-            self.held = false;
-            self.log("released");
+        for child in self.children.iter_mut() {
+            activations.extend_from_slice(&child.get_activations());
         }
         
-        let mouse = mouse_position();
-        if activations.is_empty()
-        && mouse.0 > self.absolute.x 
-        && mouse.0 < self.absolute.x + self.absolute.w
-        && mouse.1 > self.absolute.y
-        && mouse.1 < self.absolute.y + self.absolute.h {
-                
-                if !self.mouse_in {
-                    (self.on_mouse_enter)(self);
-                }
-                
-                self.mouse_in = true;
-                if is_mouse_button_pressed(MouseButton::Left) {
-                    activations.push((self.on_mouse_press)(self));
-                    self.held = true;
-                    self.log("held");
-                } else if is_mouse_button_released(MouseButton::Left) {
-                    self.log("clicked");
-                    activations.push((self.on_click)(self));
-                    self.held = false;
-                } else if mouse_released{
-                    activations.push(Activation { source: self.id, action: Action::Hover });
-                }
-        } else if self.mouse_in {
-            (self.on_mouse_exit)(self);
-            self.mouse_in = false;
+        if activations.is_empty() {
+
+            let act = self.data.check_activation(&self.id, self.absolute);
+            
+            if let Some(act) = act {
+                activations.push(act);
+            }
         }
         
-        if mouse_released {
-            activations.push((self.on_mouse_release)(self));
-        }
-        
-        return activations;
+        activations
     }
     
-    fn log(&self, msg: &str) {
-        println!("{} >>> {msg}", self.name);
+    pub fn draw(&self) {
+        
+        self.data.draw(self.absolute, self.primary, self.secondary);
+        
+        for child in self.children.iter() {
+            child.draw();
+        }
+    }
+    
+    // === Misc ===
+    
+    pub fn iter(&self) -> UiIterator {
+        UiIterator {
+            stack: vec![ &self ]
+        }
+    }
+    
+}
+
+// ================== Trait implementations ====================
+
+impl <'a> Iterator for UiIterator<'a> {
+    type Item = &'a Widget;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        let r = self.stack.pop();
+        
+        if let Some(current) = r {
+            self.stack.extend_from_slice(&current.children.iter().collect::<Vec::<_>>());
+        }
+        
+        r
     }
 }
 
-pub fn default_background(s: &Widget) {
-    draw_rectangle(s.absolute.x, s.absolute.y, s.absolute.w, s.absolute.h, s.secondary);
-}
+// ============ Conversions ===========
 
-pub fn default_foreground(s: &Widget) {
-    draw_text(&s.name, s.absolute.x, s.absolute.y + 100.0, 16.0, s.primary);
-}
-
-pub fn default_click_callback(s: &mut Widget) -> Activation {
-    Activation {
-        source: s.id,
-        action: Action::Press
+impl From<&Widget> for Activation {
+    fn from(w: &Widget) -> Self {
+        Self {
+            id: w.id.clone(),
+            message: None
+        }
     }
 }
 
-pub fn default_hover_callback(s: &mut Widget) {
-    std::mem::swap(&mut s.primary, &mut s.secondary);
-}
+// ============ Operators =============
 
-pub fn nothing_masking(s: &mut Widget) -> Activation{
-    Activation {
-        source: s.id,
-        action: Action::Dummy
+impl Mul<Self> for Layout {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self::Output {
+        Self {
+            scale: vec2(
+                self.scale.x * other.scale.x,
+                self.scale.y * other.scale.y
+            ),
+            center: vec2(
+                self.scale.x * other.center.x + self.center.x,
+                self.scale.y * other.center.y + self.center.y
+            )
+        }
     }
 }
 
-pub fn nothing(s: &mut Widget) {
-    // Nothing...
+// ============ Defaults =============
+
+impl Default for Widget {
+    fn default() -> Self {
+        Self {
+            id: String::from("Unnamed"),
+            data: WidgetData::Frame { outline: 0f32 },
+            relative: Layout::default(),
+            absolute: Layout::default(),
+            primary: BLACK,
+            secondary: BLACK,
+            children: Vec::default()
+        }
+    }
+}
+
+impl Default for Layout {
+    fn default() -> Self {
+        Self {
+            center: Vec2::ZERO,
+            scale: Vec2::ONE
+        }
+    }
 }
