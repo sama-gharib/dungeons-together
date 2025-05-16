@@ -1,7 +1,7 @@
 # Dungeons together
 
-[!IMPORTANT]
-This project is in very early development !
+> [!IMPORTANT]
+> This project is in very early development !
 
 
 ## For short
