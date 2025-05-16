@@ -21,5 +21,6 @@ This game will be a multiplayer 2D dungeon crawler.
 
 ## What's to do ?
 
+1. Add clear documentation
 1. Make UI not ugly
 1. Code the game (would be a nice idea)
