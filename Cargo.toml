@@ -3,5 +3,11 @@ name = "bored"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies.desi-ui]
+path = "desi-ui"
+
+[dependencies.uilang]
+path = "uilang"
+
 [dependencies]
 macroquad = "0.4.14"

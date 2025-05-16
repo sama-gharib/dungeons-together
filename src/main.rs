@@ -1,17 +1,15 @@
 use std::{borrow::BorrowMut, sync::{Arc, Mutex}, thread::{self, sleep}, time::Duration};
 
-use game::Drawable;
 use macroquad::prelude::*;
 
 use miniquad::window::screen_size;
 use network::{ client::GameClient, server::GameServer};
 use utils::Random;
 use network::GameAgent;
-use ui::{Layout, Activation, Widget, WidgetData, ButtonState};
+use desi_ui::*;
 
 mod utils;
 mod network;
-mod ui;
 mod game;
 
 enum Mode {
@@ -29,6 +27,7 @@ enum AppState {
 async fn main() {
     
     Random::seed();
+
     
     let mut ui = Widget::new(WidgetData::Frame { outline: 0.0 })
         .with_primary(WHITE)
