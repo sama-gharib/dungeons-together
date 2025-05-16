@@ -18,8 +18,8 @@ pub struct Layout {
 
 #[derive(Debug, Clone)]
 pub struct Activation {
-   id: String,
-   message: Option<String>
+   pub id: String,
+   pub message: Option<String>
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -87,7 +87,7 @@ impl WidgetData {
             WidgetData::Frame { .. } => Self::activate_frame(),
             WidgetData::Label { .. } => Self::activate_label(),
             WidgetData::Button { state, .. } => Self::activate_button(id, layout, state),
-            WidgetData::TextInput { input, selected, .. } => Self::activate_text_input(id, input, selected)
+            WidgetData::TextInput { input, selected, .. } => Self::activate_text_input(id, layout, input, selected)
         }
     }
     
@@ -143,14 +143,8 @@ impl Widget {
     
     // === Recursives ===
     
-    // == Gates ==
-    pub fn update_absolutes(&mut self) {
-        self.recursive_absolute_update(None);
-    }
-    
-    // == Bodies ==
-    fn recursive_absolute_update(&mut self, parent_absolute: Option<Layout>) {
-        self.absolute = parent_absolute.unwrap_or_default() * self.relative;
+    pub fn update_absolutes(&mut self, parent_absolute: Layout) {
+        self.absolute = parent_absolute * self.relative;
         
         if let WidgetData::Label{ font_size, text} = &mut self.data {
             let measures = measure_text(&text, None, *font_size as u16, 1.0);
@@ -164,7 +158,7 @@ impl Widget {
         }
         
         for child in self.children.iter_mut() {
-            child.recursive_absolute_update(Some(self.absolute))
+            child.update_absolutes(self.absolute)
         }
     }
     

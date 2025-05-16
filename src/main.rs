@@ -3,6 +3,7 @@ use std::{borrow::BorrowMut, sync::{Arc, Mutex}, thread::{self, sleep}, time::Du
 use game::Drawable;
 use macroquad::prelude::*;
 
+use miniquad::window::screen_size;
 use network::{ client::GameClient, server::GameServer};
 use utils::Random;
 use network::GameAgent;
@@ -33,9 +34,20 @@ async fn main() {
         .with_primary(WHITE)
         .with_relative(
             Layout {
-                center: vec2(400.0, 300.0),
-                scale: vec2(800.0, 600.0)
+                center: vec2(0.0, 0.0),
+                scale: vec2(1.0, 1.0)
             }
+        )
+        .with_child(
+            Widget::new(WidgetData::TextInput { placeholder: String::from("Your name here"), input: String::new(), selected: false })
+                .with_id("ip")
+                .with_primary(WHITE)
+                .with_relative(
+                    Layout {
+                        center: vec2(0., -0.45),
+                        scale: vec2(0.4, 0.08)
+                    }
+                )
         )
         .with_child(
             Widget::new(WidgetData::Frame { outline: 0.0 })
@@ -49,49 +61,73 @@ async fn main() {
                     Widget::new(WidgetData::Button { state: ButtonState::Rest })
                         .with_id("join")
                         .with_primary(WHITE)
+                        .with_secondary(BLUE)
                         .with_relative(
                             Layout {
                                 center: vec2(0., -0.26),
                                 scale: vec2(0.4, 0.2)
                             }
                         )
+                        .with_child(
+                            Widget::new(WidgetData::Label { text: String::from("Join"), font_size: 100.0 })
+                        )
                 )
                 .with_child(
                     Widget::new(WidgetData::Button { state: ButtonState::Rest })
                         .with_id("host")
                         .with_primary(WHITE)
+                        .with_secondary(BLUE)
                         .with_relative(
                             Layout {
-                                center: vec2(0., -0.01),
+                                center: vec2(0., 0.),
                                 scale: vec2(0.4, 0.2)
                             }
+                        )
+                        .with_child(
+                            Widget::new(WidgetData::Label { text: String::from("Host"), font_size: 100.0 })
                         )
                 )
                 .with_child(
                     Widget::new(WidgetData::Button { state: ButtonState::Rest })
                         .with_id("quit")
                         .with_primary(WHITE)
+                        .with_secondary(BLUE)
                         .with_relative(
                             Layout {
-                                center: vec2(0., 0.24),
+                                center: vec2(0., 0.26),
                                 scale: vec2(0.4, 0.2)
                             }
                         )
+                        .with_child(
+                            Widget::new(WidgetData::Label { text: String::from("Quit"), font_size: 100.0 })
+                        )
                 )
         );
-
-    ui.update_absolutes();
     
     'app: loop {
         let state;
         
         'menu: loop {
-            
+          
+            ui.update_absolutes(
+                Layout::new(
+                    Vec2::from(screen_size())/2.0, 
+                    Vec2::from(screen_size())
+                )
+             );
+                
             clear_background(GREEN);
             
             for activation in ui.get_activations() {
                 println!("{:?}", activation);
+                state = match &activation.id[..]  {
+                    "join" => AppState::Joining,
+                    "host" => AppState::Hosting,
+                    "quit" => AppState::Finished,
+                    _      => continue
+                };
                 
+                break 'menu;
             }
             
             ui.draw();
@@ -105,12 +141,12 @@ async fn main() {
             AppState::Joining  => Mode::Client
         };
         
-        // default_game(mode).await;
+        default_game(mode).await;
         
     }
     
 }
-/*
+
 async fn default_game(mode: Mode) {
     
     let mut s: Arc<Mutex<dyn GameAgent + Send>> = match mode {
@@ -137,11 +173,14 @@ async fn default_game(mode: Mode) {
         }
     });
     
-    let mut ui = Widget::default_button()
-        .with_center(vec2(0.4, -0.4))
-        .with_size(vec2(0.15, 0.1))
-        .with_children(&mut [Widget::default_label().with_name("Menu").with_primary(BLACK)]);
-    ui.recalculate_absolutes(vec2(400.0, 300.0), vec2(800.0, 600.0));
+    let mut ui = Widget::new(WidgetData::Button { state: ButtonState::Rest })
+        .with_id("menu")
+        .with_relative(Layout::new(vec2(0.4, -0.4), vec2(0.15, 0.1)))
+        .with_primary(WHITE)
+        .with_secondary(BLUE)
+        .with_child(Widget::new(WidgetData::Label { text: String::from("Menu"), font_size: 46f32 }).with_primary(BLACK));
+    
+    ui.update_absolutes(Layout::new(vec2(400.0, 300.0), vec2(800.0, 600.0)));
     
     'game: loop {            
         clear_background(BLACK);
@@ -154,7 +193,8 @@ async fn default_game(mode: Mode) {
         
         ui.draw();
         for activation in ui.get_activations() {
-            if let Action::Activate = activation.get_action() {
+            println!("{activation:?}");
+            if activation.id == "menu" {
                 break 'game;
             }
         }
@@ -173,5 +213,3 @@ async fn default_game(mode: Mode) {
     }
     
 }
-
-*/
