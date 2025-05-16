@@ -1,5 +1,46 @@
 use proc_macro::{ TokenStream, TokenTree };
 
+#[derive(Debug)]
+enum Parameter {
+    Position,
+    Size,
+    Text,
+    Primary,
+    Secondary
+}
+
+impl From<&str> for Parameter {
+    fn from(s: &str) -> Self {
+        match s {
+            "position" => Self::Position,
+            "size" => Self::Size,
+            "text" => Self::Text,
+            "primary" => Self::Primary,
+            "secondary" => Self::Secondary,
+            _ => panic!("Unknown parameter: '{s}'")
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Widget {
+    Frame,
+    Label,
+    Button
+}
+
+impl From<&str> for Widget {
+    fn from(s: &str) -> Self {
+        match s {
+            "Frame" => Self::Frame,
+            "Label" => Self::Label,
+            "Button" => Self::Button,
+            _ => panic!("Unknown widget: '{s}'")
+        }
+    }
+}
+
+
 #[derive(Copy, Clone)]
 enum ParsingState {
     Initial,
@@ -36,24 +77,26 @@ enum Symbol {
 
 impl Symbol {
     
-    fn ui(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn ui(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
         let current = tokens[*index].clone();
         match current {
             Terminal::OpeningTag => {
-                Self::begin(tokens, index);
+                Self::begin(tokens, index, widget_stack);
                 Self::params(tokens, index);
-                Self::children(tokens, index);
-                Self::end(tokens, index);
+                Self::children(tokens, index, widget_stack);
+                Self::end(tokens, index, widget_stack);
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", NonTerminal::Begin)
         }
     }
     
-    fn begin(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn begin(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
         Self::check_terminal(tokens, Terminal::OpeningTag, index);
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(value) => {
+                widget_stack.push(value.clone());
+                let value = Widget::from(&value[..]);
                 *index += 1;
                 println!("Begining a {:?} widget", value);
             },
@@ -61,11 +104,17 @@ impl Symbol {
         }
         Self::check_terminal(tokens, Terminal::ClosingTag, index);
     }
-    fn end(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn end(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
         Self::check_terminal(tokens, Terminal::EndingTag, index);
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(value) => {
+                match widget_stack.pop() {
+                    None => panic!("Unmatched ending tag: {value}"),
+                    Some(top) => if top != value {
+                        panic!("Tried to close a {value} when next in stack is a {top}");
+                    }
+                } 
                 *index += 1;
                 println!("Ending a {:?} widget", value);
             },
@@ -90,6 +139,7 @@ impl Symbol {
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(id) => {
+                let id = Parameter::from(&id[..]);
                 *index += 1;
                 Self::check_terminal(tokens, Terminal::Assignation, index);
                 if let Terminal::Literal(value) = tokens[*index].clone() {
@@ -103,13 +153,13 @@ impl Symbol {
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", Terminal::Identifier(String::from("any")))
         }
     }
-    fn children(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn children(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
         let current = tokens[*index].clone();
         match current {
             Terminal::OpeningTag => {
                 println!("Next line is a child");
-                Self::ui(tokens, index);
-                Self::children(tokens, index);
+                Self::ui(tokens, index, widget_stack);
+                Self::children(tokens, index, widget_stack);
             },
             Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
@@ -177,11 +227,13 @@ pub fn uilang(input: TokenStream) -> TokenStream {
             TokenTree::Group(_) => panic!("Invalid syntax: `Group`s are not supported")
         }
     }
+    parsed.push(Terminal::Eof);
     
     // Parsing
     
     let mut index = 0;
-    Symbol::ui(&mut parsed, &mut index);
+    let mut widget_stack = Vec::new();
+    Symbol::ui(&mut parsed, &mut index, &mut widget_stack);
     
     TokenStream::new()
 }
