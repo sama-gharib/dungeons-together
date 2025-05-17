@@ -2,10 +2,15 @@
 //! This crate exports the `uilang!` procedural macro. It enables to create
 //! UIs with the [`desi-ui`](https://github.com/sama-gharib/dungeons-together/tree/main/desi-ui/) crate
 //! with a simple markup language. 
-//! # State
-//! Currently, the `uilang!` macro only checks your UI code syntax.
+//! <div class="warning">
+//!     <p > Currently, the <code>uilang!</code> macro only checks your UI code syntax. </p>
+//! </div>
+//! 
 //! # Example
+//! 
 //! ```
+//! use uilang::uilang;
+//! 
 //! let ui = uilang!(
 //!     <Frame>
 //!         <Label>
@@ -19,15 +24,15 @@
 //!             </Label>
 //!         </Button>
 //!     </Frame>
-//!);
+//! );
 //! ```
-//!
 //! # Language specifications
 //! The `uilang` language is defined by the following context-free grammar in BNF : 
-//! ```
+//! ```text
+//! 
 //! <ui>          ::= <opening> <parameters> <children> <closing>
 //! <opening>     ::= "<" <identifier> ">"
-//! <closing>     ::= '</' <identifier> '>'
+//! <closing>     ::= "</" <identifier> ">"
 //! <parameters>  ::= <parameter> <parameters> | ""
 //! <parameter>   ::= <identifier> ":" <string-literal>
 //! <children>    ::= <ui>  <children> | ""
@@ -37,7 +42,7 @@
 //! Newlines and indentations are ignored.
 
 
-use proc_macro::{ TokenStream, TokenTree };
+use proc_macro::{ Literal, TokenStream, TokenTree };
 
 /// The list of valid parameters
 #[derive(Debug)]
@@ -228,7 +233,7 @@ impl Symbol {
     
 }
 
-/// Translate your `uilang` code into correct Rust with [`desi-ui`](https://github.com/sama-gharib/dungeons-together/tree/main/desi-ui/)
+/// Translates your `uilang` code into correct Rust with [`desi-ui`](https://github.com/sama-gharib/dungeons-together/tree/main/desi-ui/)
 #[proc_macro]
 pub fn uilang(input: TokenStream) -> TokenStream {
     
@@ -293,6 +298,6 @@ pub fn uilang(input: TokenStream) -> TokenStream {
     // TODO
     // This is temporary code used to shut up the compiler.
     // Once this macro is complete, it should return a true `TokenStream`
-    // and not this enpty one.
-    TokenStream::new()
+    // and not this default one.
+    TokenStream::from_iter([TokenTree::Literal(Literal::u8_suffixed(0))])
 }

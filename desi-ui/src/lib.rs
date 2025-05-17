@@ -1,4 +1,4 @@
-//! This crate enables to create and manage very simple UIs with (macroquad)[https://macroquad.rs/].
+//! This crate enables to create and manage very simple UIs with [macroquad](https://macroquad.rs/).
 
 use macroquad::prelude::*;
 
@@ -50,9 +50,9 @@ pub enum WidgetData {
 
 /// # Introduction
 /// This is the main structure of this crate. It is defined like
-/// a tree, which enable to define your widgets positions relative to their
+/// a tree, which enables to define your widgets positions relative to their
 /// parents.
-/// Top-left if `vec2(-0.5, -0.5)`, bottom-right is `vec2(0.5, 0.5)` and center is `vec2(0.0, 0.0)`.
+/// Top-left is `vec2(-0.5, -0.5)`, bottom-right is `vec2(0.5, 0.5)` and center is `vec2(0.0, 0.0)`.
 /// # Exemple
 /// The following code creates a simple menu with a "Hello, World!" title and a "Click me" button.
 /// ```
