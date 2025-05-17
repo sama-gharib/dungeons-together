@@ -1,5 +1,45 @@
+//! # Introduction
+//! This crate exports the `uilang!` procedural macro. It enables to create
+//! UIs with the [`desi-ui`](https://github.com/sama-gharib/dungeons-together/tree/main/desi-ui/) crate
+//! with a simple markup language. 
+//! # State
+//! Currently, the `uilang!` macro only checks your UI code syntax.
+//! # Example
+//! ```
+//! let ui = uilang!(
+//!     <Frame>
+//!         <Label>
+//!             text: "Hello, World!"
+//!         </Label>
+//!         <Button>
+//!             <Label>
+//!                 primary: "RED"
+//!                 secondary: "BLUE"
+//!                 text: "Click me!"
+//!             </Label>
+//!         </Button>
+//!     </Frame>
+//!);
+//! ```
+//!
+//! # Language specifications
+//! The `uilang` language is defined by the following context-free grammar in BNF : 
+//! ```
+//! <ui>          ::= <opening> <parameters> <children> <closing>
+//! <opening>     ::= "<" <identifier> ">"
+//! <closing>     ::= '</' <identifier> '>'
+//! <parameters>  ::= <parameter> <parameters> | ""
+//! <parameter>   ::= <identifier> ":" <string-literal>
+//! <children>    ::= <ui>  <children> | ""
+//! ```
+//! Where `<identifier>` and `<string-literal>` are Rust tokens. 
+//! Moreover, any `<opening>` and `<closing>` identifiers must match when in the same `<ui>`.
+//! Newlines and indentations are ignored.
+
+
 use proc_macro::{ TokenStream, TokenTree };
 
+/// The list of valid parameters
 #[derive(Debug)]
 enum Parameter {
     Position,
@@ -9,7 +49,9 @@ enum Parameter {
     Secondary
 }
 
+
 impl From<&str> for Parameter {
+    /// Also checks the validity of `s`    
     fn from(s: &str) -> Self {
         match s {
             "position" => Self::Position,
@@ -22,6 +64,7 @@ impl From<&str> for Parameter {
     }
 }
 
+/// The list of valid widgets
 #[derive(Debug)]
 enum Widget {
     Frame,
@@ -30,6 +73,7 @@ enum Widget {
 }
 
 impl From<&str> for Widget {
+    /// Also checks if `s` is a valid widget name
     fn from(s: &str) -> Self {
         match s {
             "Frame" => Self::Frame,
@@ -40,7 +84,7 @@ impl From<&str> for Widget {
     }
 }
 
-
+/// Used in lexing to aggregate any `</` into a single token
 #[derive(Copy, Clone)]
 enum ParsingState {
     Initial,
@@ -69,6 +113,11 @@ enum NonTerminal {
     Children
 }
 
+/// This enum contains every parsing methodes for uilang.
+/// Its `ui`, `begin`, `end`, `params`, `param` and `children` methodes
+/// represent rules from the context-free grammar listed in the crate's
+/// documentation.
+/// For short, this is a recursive descent parser.
 #[derive(Clone, Debug)]
 enum Symbol {
     Terminal (Terminal),
@@ -179,10 +228,15 @@ impl Symbol {
     
 }
 
+/// Translate your `uilang` code into correct Rust with [`desi-ui`](https://github.com/sama-gharib/dungeons-together/tree/main/desi-ui/)
 #[proc_macro]
 pub fn uilang(input: TokenStream) -> TokenStream {
     
     // Lexing
+    // Mostly just aggregates '</' into a single token.
+    // This code is a bit convoluted for such a simple purpose but
+    // it makes it scalable for the eventuality of some more preprocessing
+    // needed.
     let mut state = ParsingState::Initial;
     let mut parsed: Vec<Terminal> = Vec::new();
     
@@ -235,5 +289,10 @@ pub fn uilang(input: TokenStream) -> TokenStream {
     let mut widget_stack = Vec::new();
     Symbol::ui(&mut parsed, &mut index, &mut widget_stack);
     
+    
+    // TODO
+    // This is temporary code used to shut up the compiler.
+    // Once this macro is complete, it should return a true `TokenStream`
+    // and not this enpty one.
     TokenStream::new()
 }
