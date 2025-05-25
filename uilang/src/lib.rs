@@ -10,21 +10,37 @@
 //! 
 //! ```
 //! use uilang::uilang;
-//! 
-//! let ui = uilang!(
+//! use macroquad::prelude::*; 
+//! use desi_ui::*;
+//!
+//! # async fn exemple() {
+//! let mut ui = uilang!(
 //!     <Frame>
+//!         primary: "BLUE"
 //!         <Label>
-//!             text: "Hello, World!"
+//!             scale: "(0.8, 0.3)"
 //!         </Label>
 //!         <Button>
+//!             center: "(0.0, 0.4)"
+//!             scale: "(0.2, 0.2)"
 //!             <Label>
-//!                 primary: "RED"
-//!                 secondary: "BLUE"
-//!                 text: "Click me!"
+//!                 primary: "WHITE"
 //!             </Label>
 //!         </Button>
 //!     </Frame>
 //! );
+//! 
+//! ui.update_absolutes(Layout { center: vec2(400.0, 300.0), scale: vec2(800.0, 600.0) });
+//! 
+//! loop {
+//!     clear_background(RED);
+//!     
+//!     ui.draw();
+//!     ui.get_activations();
+//!     
+//!     next_frame().await;
+//! }
+//! # }
 //! ```
 //! # Language specifications
 //! The `uilang` language is defined by the following context-free grammar in BNF : 
@@ -43,6 +59,7 @@
 
 
 use proc_macro::{ Literal, TokenStream, TokenTree };
+use desi_ui::{ WidgetData };
 
 /// The list of valid parameters
 #[derive(Debug)]
@@ -59,12 +76,12 @@ impl From<&str> for Parameter {
     /// Also checks the validity of `s`    
     fn from(s: &str) -> Self {
         match s {
-            "position" => Self::Position,
-            "size" => Self::Size,
+            "center" => Self::Position,
+            "scale" => Self::Size,
             "text" => Self::Text,
             "primary" => Self::Primary,
             "secondary" => Self::Secondary,
-            _ => panic!("Unknown parameter: '{s}'")
+            _ => panic!("Error: Unknown parameter: '{s}'")
         }
     }
 }
@@ -74,7 +91,8 @@ impl From<&str> for Parameter {
 enum Widget {
     Frame,
     Label,
-    Button
+    Button,
+    TextInput
 }
 
 impl From<&str> for Widget {
@@ -131,20 +149,30 @@ enum Symbol {
 
 impl Symbol {
     
-    fn ui(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
+    fn ui(
+        tokens: &mut Vec<Terminal>,
+        index: &mut usize,
+        widget_stack: &mut Vec<String>,
+        generated_code: &mut String
+    ) {
         let current = tokens[*index].clone();
         match current {
             Terminal::OpeningTag => {
-                Self::begin(tokens, index, widget_stack);
-                Self::params(tokens, index);
-                Self::children(tokens, index, widget_stack);
-                Self::end(tokens, index, widget_stack);
+                Self::begin(tokens, index, widget_stack, generated_code);
+                Self::params(tokens, index, generated_code);
+                Self::children(tokens, index, widget_stack, generated_code);
+                Self::end(tokens, index, widget_stack, generated_code);
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", NonTerminal::Begin)
         }
     }
     
-    fn begin(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
+    fn begin(
+        tokens: &mut Vec<Terminal>, 
+        index: &mut usize, 
+        widget_stack: &mut Vec<String>,
+        generated_code: &mut String
+    ) {
         Self::check_terminal(tokens, Terminal::OpeningTag, index);
         let current = tokens[*index].clone();
         match current {
@@ -152,13 +180,30 @@ impl Symbol {
                 widget_stack.push(value.clone());
                 let value = Widget::from(&value[..]);
                 *index += 1;
+                
                 println!("Begining a {:?} widget", value);
+                
+                generated_code.push_str(&format!("Widget::new( WidgetData::{value:?} {{ "));
+                generated_code.push_str(
+                    match value {
+                        Widget::Frame     => "outline: 0.0",
+                        Widget::Label     => "text: \"Placeholder\".to_string(), font_size: 60.0",
+                        Widget::Button    => "state: ButtonState::Rest",
+                        Widget::TextInput => "placeholder: \"Placeholder\".to_string(), input: String::new(), selected: false",
+                    }
+                );
+                generated_code.push_str(" } )\n\t.with_relative(Layout {center: vec2(0.0, 0.0), scale: vec2(1.0, 1.0)})");
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", Terminal::OpeningTag)
         }
         Self::check_terminal(tokens, Terminal::ClosingTag, index);
     }
-    fn end(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
+    fn end(
+        tokens: &mut Vec<Terminal>, 
+        index: &mut usize, 
+        widget_stack: &mut Vec<String>,
+        generated_code: &mut String
+    ) {
         Self::check_terminal(tokens, Terminal::EndingTag, index);
         let current = tokens[*index].clone();
         match current {
@@ -176,12 +221,16 @@ impl Symbol {
         }
         Self::check_terminal(tokens, Terminal::ClosingTag, index);
     }
-    fn params(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn params(
+        tokens: &mut Vec<Terminal>, 
+        index: &mut usize,
+        generated_code: &mut String
+    ) {
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(_) => {
-                Self::param(tokens, index);
-                Self::params(tokens, index);
+                Self::param(tokens, index, generated_code);
+                Self::params(tokens, index, generated_code);
             },
             Terminal::OpeningTag | Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
@@ -189,16 +238,40 @@ impl Symbol {
             _ => panic!("Unexpected token : {current:?}. Expected paramters, children or closing")
         }
     }
-    fn param(tokens: &mut Vec<Terminal>, index: &mut usize) {
+    fn param(
+        tokens: &mut Vec<Terminal>,
+        index: &mut usize,
+        generated_code: &mut String
+    ) {
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(id) => {
-                let id = Parameter::from(&id[..]);
+                let parsed_id = Parameter::from(&id[..]);
                 *index += 1;
                 Self::check_terminal(tokens, Terminal::Assignation, index);
                 if let Terminal::Literal(value) = tokens[*index].clone() {
                     *index += 1;
-                    println!("Defining a {:?} as ''{:?}'", id, value);
+                    println!("Defining a {:?} as ''{:?}'", parsed_id, value);
+                    
+                    if id != "text" {
+                        let (first, last) = (value.chars().next().unwrap(), value.chars().rev().next().unwrap());
+                        if (first, last) == ('(', ')') {
+                            let s = value
+                                .chars()
+                                .filter(|x| *x != ')' && *x != '(')
+                                .collect::<String>();
+                            let s = s.split(",")
+                                .into_iter()
+                                .collect::<Vec<_>>();
+                            
+                            if s.len() != 2 { panic!("Expected 2D coordinates, found {}D", s.len()) }
+                            
+                            generated_code.push_str(&format!("\n\t.with_{id}(vec2({}, {}))", s[0], s[1]));
+                        } else {
+                            let value: String = value.chars().filter(|x| *x != '"').collect();
+                            generated_code.push_str(&format!("\n\t.with_{id}({value}.into())"));
+                        }
+                    }
                 } else {
                     panic!("Unexpected {:?}. Expected a literal", tokens[*index]);
                 }
@@ -207,13 +280,21 @@ impl Symbol {
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", Terminal::Identifier(String::from("any")))
         }
     }
-    fn children(tokens: &mut Vec<Terminal>, index: &mut usize, widget_stack: &mut Vec<String>) {
+    fn children(
+        tokens: &mut Vec<Terminal>, 
+        index: &mut usize, 
+        widget_stack: &mut Vec<String>,
+        generated_code: &mut String
+    ) {
         let current = tokens[*index].clone();
         match current {
             Terminal::OpeningTag => {
                 println!("Next line is a child");
-                Self::ui(tokens, index, widget_stack);
-                Self::children(tokens, index, widget_stack);
+                
+                generated_code.push_str("\n\t.with_child(");
+                Self::ui(tokens, index, widget_stack, generated_code);
+                Self::children(tokens, index, widget_stack, generated_code);
+                generated_code.push_str("\n\t)");
             },
             Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
@@ -292,12 +373,13 @@ pub fn uilang(input: TokenStream) -> TokenStream {
     
     let mut index = 0;
     let mut widget_stack = Vec::new();
-    Symbol::ui(&mut parsed, &mut index, &mut widget_stack);
+    let mut generated_code = String::new();
+    
+    Symbol::ui(&mut parsed, &mut index, &mut widget_stack, &mut generated_code);
+    
+    println!("{generated_code}");
     
     
-    // TODO
-    // This is temporary code used to shut up the compiler.
-    // Once this macro is complete, it should return a true `TokenStream`
-    // and not this default one.
-    TokenStream::from_iter([TokenTree::Literal(Literal::u8_suffixed(0))])
+    generated_code.parse().unwrap()
+    // "0u8".parse().unwrap()
 }

@@ -1,9 +1,13 @@
 use uilang::uilang;
+use desi_ui::*;
+use macroquad::prelude::*;
 
 #[test]
 fn simple() {
-    uilang!(
+    let mut a = uilang!{
         <Frame>
+            center: "(0.5, 0.5)"
+            scale: "(1.0, 1.0)"
             primary: "RED"
             secondary: "BLUE"
             <Label>
@@ -20,5 +24,5 @@ fn simple() {
                 </Button>
             </Frame>
         </Frame>
-    );
+    };    
 }

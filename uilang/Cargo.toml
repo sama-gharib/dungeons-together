@@ -5,3 +5,7 @@ edition = "2024"
 
 [lib]
 proc-macro = true
+
+[dependencies]
+desi-ui = { version = "0.1.0", path = "../desi-ui" }
+macroquad = "0.4.14"

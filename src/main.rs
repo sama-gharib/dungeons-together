@@ -4,6 +4,7 @@ use macroquad::prelude::*;
 
 use miniquad::window::screen_size;
 use network::{ client::GameClient, server::GameServer};
+use uilang::uilang;
 use utils::Random;
 use network::GameAgent;
 use desi_ui::*;
@@ -28,7 +29,7 @@ async fn main() {
     
     Random::seed();
 
-    
+
     let mut ui = Widget::new(WidgetData::Frame { outline: 0.0 })
         .with_primary(WHITE)
         .with_relative(
@@ -38,7 +39,11 @@ async fn main() {
             }
         )
         .with_child(
-            Widget::new(WidgetData::TextInput { placeholder: String::from("Your name here"), input: String::new(), selected: false })
+            Widget::new(WidgetData::TextInput {
+                placeholder: String::from("Your name here"),
+                input: String::new(),
+                selected: false
+            })
                 .with_id("ip")
                 .with_primary(WHITE)
                 .with_relative(

@@ -188,6 +188,16 @@ impl Widget {
         self
     }
 
+    pub fn with_center(mut self, center: Vec2) -> Self {
+        self.relative.center = center;
+        self    
+    }
+    
+    pub fn with_scale(mut self, scale: Vec2) -> Self {
+        self.relative.scale = scale;
+        self
+    }
+    
     pub fn with_relative(mut self, relative: Layout) -> Self {
         self.relative = relative;
         self
