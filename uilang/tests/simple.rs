@@ -20,7 +20,9 @@ fn simple() {
                     </Label>
                 </Button>
                 <Button>
-                    text: "This is button 2"
+                    <Label>
+                        text: "This is button 2"
+                    </Label>
                 </Button>
             </Frame>
         </Frame>

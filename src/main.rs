@@ -29,85 +29,36 @@ async fn main() {
     
     Random::seed();
 
+    let mut ui = uilang!(
+        <Frame>
+            primary: "WHITE"
+            <Frame>
+                scale: "(0.5, 0.8)"
+                <Button>
+                    id: "join"
+                    primary: "WHITE"
+                    center: "(0.0, -0.26)"
+                    scale: "(0.4, 0.2)"
+                    <Label> text: "Join" </Label>
+                </Button>
+                <Button>
+                    id: "host"
+                    primary: "WHITE"
+                    center: "(0.0, 0.0)"
+                    scale: "(0.4, 0.2)"
+                    <Label> text: "Host" </Label>
+                </Button>
+                <Button>
+                    id: "quit"
+                    primary: "WHITE"
+                    center: "(0.0, 0.26)"
+                    scale: "(0.4, 0.2)"
+                    <Label> text: "Quit" </Label>
+                </Button>
+            </Frame>
+        </Frame>
+    );
 
-    let mut ui = Widget::new(WidgetData::Frame { outline: 0.0 })
-        .with_primary(WHITE)
-        .with_relative(
-            Layout {
-                center: vec2(0.0, 0.0),
-                scale: vec2(1.0, 1.0)
-            }
-        )
-        .with_child(
-            Widget::new(WidgetData::TextInput {
-                placeholder: String::from("Your name here"),
-                input: String::new(),
-                selected: false
-            })
-                .with_id("ip")
-                .with_primary(WHITE)
-                .with_relative(
-                    Layout {
-                        center: vec2(0., -0.45),
-                        scale: vec2(0.4, 0.08)
-                    }
-                )
-        )
-        .with_child(
-            Widget::new(WidgetData::Frame { outline: 0.0 })
-                .with_relative(
-                    Layout {
-                        center: vec2(0., 0.),
-                        scale: vec2(0.5, 0.8)
-                    }
-                )
-                .with_child(
-                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
-                        .with_id("join")
-                        .with_primary(WHITE)
-                        .with_secondary(BLUE)
-                        .with_relative(
-                            Layout {
-                                center: vec2(0., -0.26),
-                                scale: vec2(0.4, 0.2)
-                            }
-                        )
-                        .with_child(
-                            Widget::new(WidgetData::Label { text: String::from("Join"), font_size: 100.0 })
-                        )
-                )
-                .with_child(
-                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
-                        .with_id("host")
-                        .with_primary(WHITE)
-                        .with_secondary(BLUE)
-                        .with_relative(
-                            Layout {
-                                center: vec2(0., 0.),
-                                scale: vec2(0.4, 0.2)
-                            }
-                        )
-                        .with_child(
-                            Widget::new(WidgetData::Label { text: String::from("Host"), font_size: 100.0 })
-                        )
-                )
-                .with_child(
-                    Widget::new(WidgetData::Button { state: ButtonState::Rest })
-                        .with_id("quit")
-                        .with_primary(WHITE)
-                        .with_secondary(BLUE)
-                        .with_relative(
-                            Layout {
-                                center: vec2(0., 0.26),
-                                scale: vec2(0.4, 0.2)
-                            }
-                        )
-                        .with_child(
-                            Widget::new(WidgetData::Label { text: String::from("Quit"), font_size: 100.0 })
-                        )
-                )
-        );
-    
     'app: loop {
         let state;
         

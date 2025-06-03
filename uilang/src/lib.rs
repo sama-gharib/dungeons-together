@@ -64,6 +64,7 @@ use desi_ui::{ WidgetData };
 /// The list of valid parameters
 #[derive(Debug)]
 enum Parameter {
+    Id,
     Position,
     Size,
     Text,
@@ -76,6 +77,7 @@ impl From<&str> for Parameter {
     /// Also checks the validity of `s`    
     fn from(s: &str) -> Self {
         match s {
+            "id" => Self::Id,
             "center" => Self::Position,
             "scale" => Self::Size,
             "text" => Self::Text,
@@ -159,7 +161,7 @@ impl Symbol {
         match current {
             Terminal::OpeningTag => {
                 Self::begin(tokens, index, widget_stack, generated_code);
-                Self::params(tokens, index, generated_code);
+                Self::params(tokens, index, widget_stack, generated_code);
                 Self::children(tokens, index, widget_stack, generated_code);
                 Self::end(tokens, index, widget_stack, generated_code);
             },
@@ -175,6 +177,8 @@ impl Symbol {
     ) {
         Self::check_terminal(tokens, Terminal::OpeningTag, index);
         let current = tokens[*index].clone();
+        let indentation = "\t".repeat(widget_stack.len() + 1);
+        
         match current {
             Terminal::Identifier(value) => {
                 widget_stack.push(value.clone());
@@ -192,7 +196,11 @@ impl Symbol {
                         Widget::TextInput => "placeholder: \"Placeholder\".to_string(), input: String::new(), selected: false",
                     }
                 );
-                generated_code.push_str(" } )\n\t.with_relative(Layout {center: vec2(0.0, 0.0), scale: vec2(1.0, 1.0)})");
+                generated_code.push_str(
+                    &format!(
+                        " }} )\n{indentation}.with_relative(Layout {{center: vec2(0.0, 0.0), scale: vec2(1.0, 1.0)}})"
+                    )
+                );
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", Terminal::OpeningTag)
         }
@@ -224,13 +232,14 @@ impl Symbol {
     fn params(
         tokens: &mut Vec<Terminal>, 
         index: &mut usize,
+        widget_stack: &mut Vec<String>,
         generated_code: &mut String
     ) {
         let current = tokens[*index].clone();
         match current {
             Terminal::Identifier(_) => {
-                Self::param(tokens, index, generated_code);
-                Self::params(tokens, index, generated_code);
+                Self::param(tokens, index, widget_stack, generated_code);
+                Self::params(tokens, index, widget_stack, generated_code);
             },
             Terminal::OpeningTag | Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
@@ -241,9 +250,12 @@ impl Symbol {
     fn param(
         tokens: &mut Vec<Terminal>,
         index: &mut usize,
+        widget_stack: &mut Vec<String>,
         generated_code: &mut String
     ) {
         let current = tokens[*index].clone();
+        let indentation = "\t".repeat(widget_stack.len());
+        
         match current {
             Terminal::Identifier(id) => {
                 let parsed_id = Parameter::from(&id[..]);
@@ -266,10 +278,33 @@ impl Symbol {
                             
                             if s.len() != 2 { panic!("Expected 2D coordinates, found {}D", s.len()) }
                             
-                            generated_code.push_str(&format!("\n\t.with_{id}(vec2({}, {}))", s[0], s[1]));
-                        } else {
+                            generated_code.push_str(&format!("\n{indentation}.with_{id}(vec2({}, {}))", s[0], s[1]));
+                        } else if id != "id"{
                             let value: String = value.chars().filter(|x| *x != '"').collect();
-                            generated_code.push_str(&format!("\n\t.with_{id}({value}.into())"));
+                            generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
+                        } else {
+                            generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
+                        }
+                    } else {
+                        match widget_stack.last() {
+                            Some(s) => {
+                                match &s[..] {
+                                    "Label" => {
+                                        let where_to_change = generated_code.rfind("text: \"Placeholder\".to_string(),");
+                                        match where_to_change {
+                                            Some(index) =>
+                                                generated_code.replace_range(
+                                                    (index + 6)..(index + 19),
+                                                    &value
+                                                ),
+                                            None => panic!("This error should never happen ! Found a `text` definition inside a `Label` markup with no placeholder text !")
+                                        }
+                                        
+                                    },
+                                    _ => panic!("Found `text` property definition outside of label definition")
+                                }
+                            },
+                            None => panic!("Found `text` property definition outside of widget definition")
                         }
                     }
                 } else {
@@ -287,14 +322,16 @@ impl Symbol {
         generated_code: &mut String
     ) {
         let current = tokens[*index].clone();
+        let indentation = "\t".repeat(widget_stack.len());
+        
         match current {
             Terminal::OpeningTag => {
                 println!("Next line is a child");
                 
-                generated_code.push_str("\n\t.with_child(");
+                generated_code.push_str(&format!("\n{indentation}.with_child("));
                 Self::ui(tokens, index, widget_stack, generated_code);
+                generated_code.push_str(&format!("\n{indentation})"));
                 Self::children(tokens, index, widget_stack, generated_code);
-                generated_code.push_str("\n\t)");
             },
             Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
