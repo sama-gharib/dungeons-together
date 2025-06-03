@@ -244,7 +244,7 @@ impl Symbol {
             Terminal::OpeningTag | Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
             },
-            _ => panic!("Unexpected token : {current:?}. Expected paramters, children or closing")
+            _ => panic!("Unexpected token : {current:?}. Expected parameters, children or closing")
         }
     }
     fn param(
@@ -335,6 +335,9 @@ impl Symbol {
             },
             Terminal::EndingTag => {
                 // Do nothing (produces epsilon)
+            },
+            Terminal::Identifier(id) => {
+                panic!("Found parameter `{id}` after child definition. Hint: parameters are only allowed before any child definition")  
             },
             _ => panic!("Unexpected token : {current:?}. Expected ClosingTag or child definition")
         } 
