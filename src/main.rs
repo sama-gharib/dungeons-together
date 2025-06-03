@@ -128,12 +128,16 @@ async fn default_game(mode: Mode) {
         }
     });
     
-    let mut ui = Widget::new(WidgetData::Button { state: ButtonState::Rest })
-        .with_id("menu")
-        .with_relative(Layout::new(vec2(0.4, -0.4), vec2(0.15, 0.1)))
-        .with_primary(WHITE)
-        .with_secondary(BLUE)
-        .with_child(Widget::new(WidgetData::Label { text: String::from("Menu"), font_size: 46f32 }).with_primary(BLACK));
+    let mut ui = uilang!(
+        <Button>
+            id: "menu"
+            center: "(0.4, -0.4)"
+            scale: "(0.15, 0.1)"
+            primary: "WHITE"
+            secondary: "BLUE"
+            <Label> text: "Menu" primary: "BLACK" </Label>
+        </Button>
+    );
     
     ui.update_absolutes(Layout::new(vec2(400.0, 300.0), vec2(800.0, 600.0)));
     
