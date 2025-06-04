@@ -104,6 +104,7 @@ impl From<&str> for Widget {
             "Frame" => Self::Frame,
             "Label" => Self::Label,
             "Button" => Self::Button,
+            "TextInput" => Self::TextInput,
             _ => panic!("Unknown widget: '{s}'")
         }
     }

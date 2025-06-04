@@ -33,6 +33,9 @@ impl Ui {
     pub fn is_terminated(&self) -> bool {
         self.terminated
     }
+    pub fn get_current(&self) -> MenuVariant {
+        self.current
+    }
     
     pub fn switch_menu(&mut self, next: MenuVariant) {
         if let Some(_) = self.data.get(&next) {
@@ -169,7 +172,17 @@ impl MenuVariant {
         uilang!(
             <Frame>
                 primary: "WHITE"
-                <Label> text: "Not yet implemented" </Label>
+                <Label>
+                    text: "Join"
+                    center: "(0.0, -0.4)"
+                    scale: "(0.5, 0.2)"
+                </Label>
+                <TextInput>
+                    id: "ip"
+                    primary: "WHITE"
+                    center: "(0.0, -0.25)"
+                    scale: "(0.5, 0.1)"
+                </TextInput>
                 <Button>
                     id: "back"
                     center: "(0.4, -0.4)"
