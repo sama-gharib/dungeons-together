@@ -1,107 +1,22 @@
-use std::{borrow::BorrowMut, sync::{Arc, Mutex}, thread::{self, sleep}, time::Duration};
+use application::Application;
 
-use macroquad::prelude::*;
-
-use miniquad::window::screen_size;
-use network::{ client::GameClient, server::GameServer};
-use uilang::uilang;
 use utils::Random;
-use network::GameAgent;
-use desi_ui::*;
 
 mod utils;
 mod network;
 mod game;
+mod application;
 
-enum Mode {
-    Server,
-    Client
-}
-
-enum AppState {
-    Hosting,
-    Joining,
-    Finished
-}
 
 #[macroquad::main("Bored")]
-async fn main() {
-    
+async fn main() {    
     Random::seed();
-
-    let mut ui = uilang!(
-        <Frame>
-            primary: "WHITE"
-            <Frame>
-                scale: "(0.5, 0.8)"
-                <Button>
-                    id: "join"
-                    primary: "WHITE"
-                    center: "(0.0, -0.26)"
-                    scale: "(0.4, 0.2)"
-                    <Label> text: "Join" </Label>
-                </Button>
-                <Button>
-                    id: "host"
-                    primary: "WHITE"
-                    center: "(0.0, 0.0)"
-                    scale: "(0.4, 0.2)"
-                    <Label> text: "Host" </Label>
-                </Button>
-                <Button>
-                    id: "quit"
-                    primary: "WHITE"
-                    center: "(0.0, 0.26)"
-                    scale: "(0.4, 0.2)"
-                    <Label> text: "Quit" </Label>
-                </Button>
-            </Frame>
-        </Frame>
-    );
-
-    'app: loop {
-        let state;
-        
-        'menu: loop {
-          
-            ui.update_absolutes(
-                Layout::new(
-                    Vec2::from(screen_size())/2.0, 
-                    Vec2::from(screen_size())
-                )
-             );
-                
-            clear_background(GREEN);
-            
-            for activation in ui.get_activations() {
-                println!("{:?}", activation);
-                state = match &activation.id[..]  {
-                    "join" => AppState::Joining,
-                    "host" => AppState::Hosting,
-                    "quit" => AppState::Finished,
-                    _      => continue
-                };
-                
-                break 'menu;
-            }
-            
-            ui.draw();
-            
-            next_frame().await;
-        }
-                
-        let mode = match state  {
-            AppState::Finished => break 'app,
-            AppState::Hosting  => Mode::Server,
-            AppState::Joining  => Mode::Client
-        };
-        
-        default_game(mode).await;
-        
-    }
-    
+    let mut app = Application::default();
+    app.run().await;
+    println!("Finished !");
 }
 
+/*
 async fn default_game(mode: Mode) {
     
     let mut s: Arc<Mutex<dyn GameAgent + Send>> = match mode {
@@ -172,3 +87,4 @@ async fn default_game(mode: Mode) {
     }
     
 }
+*/
