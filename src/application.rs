@@ -15,6 +15,11 @@ impl Application {
             
             self.ui.tick();
             
+            
+            if self.ui.is_terminated() {
+                break;
+            }
+            
             next_frame().await;
         }
     }    

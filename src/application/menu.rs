@@ -10,22 +10,29 @@ pub enum MenuVariant {
     Join,
     Host,
     InGame,
-    ConfirmQuit
+    ConfirmQuit,
+    Oblivion
 }
 
 pub struct Ui {
     data: HashMap<MenuVariant, Widget>,
-    current: MenuVariant
+    current: MenuVariant,
+    terminated: bool
 }
 
 impl Ui {
-    const ACTIVATED_MENUS: [MenuVariant; 5] = [
+    const ACTIVATED_MENUS: [MenuVariant; 6] = [
         MenuVariant::Main,
         MenuVariant::Join,
         MenuVariant::Host,
         MenuVariant::InGame,
-        MenuVariant::ConfirmQuit
+        MenuVariant::ConfirmQuit,
+        MenuVariant::Oblivion
     ];
+    
+    pub fn is_terminated(&self) -> bool {
+        self.terminated
+    }
     
     pub fn switch_menu(&mut self, next: MenuVariant) {
         if let Some(_) = self.data.get(&next) {
@@ -36,9 +43,14 @@ impl Ui {
     }
     
     pub fn tick(&mut self) {
-        self.update();
-        self.draw();
-        self.check_activations();
+        
+        if let MenuVariant::Oblivion = self.current {
+            self.terminated = true;
+        } else {
+            self.update();
+            self.draw();
+            self.check_activations();
+        }
     }
     
     fn update(&mut self) {
@@ -73,7 +85,8 @@ impl Default for Ui {
                         
         Self {
             data,
-            current: Self::ACTIVATED_MENUS[0]
+            current: Self::ACTIVATED_MENUS[0],
+            terminated: false
         }
     }
 }
@@ -87,6 +100,7 @@ impl MenuVariant {
             MenuVariant::Host => Self::host_menu(),
             MenuVariant::InGame => Self::in_game_menu(),
             MenuVariant::ConfirmQuit => Self::confirm_quit_menu(),
+            MenuVariant::Oblivion => Widget::default()
         }
     }
     
@@ -94,15 +108,28 @@ impl MenuVariant {
     pub fn apply(&self, activation: Activation) -> Self {
         match self {
             Self::Main => match &activation.id[..]  {
-                    "join" => Self::Join,
-                    "host" => Self::Host,
-                    "quit" => Self::ConfirmQuit,
-                    _      => Self::Main
+                "join" => Self::Join,
+                "host" => Self::Host,
+                "quit" => Self::ConfirmQuit,
+                _      => Self::Main
             },
-            Self::Join => todo!(),
-            Self::Host => todo!(),
-            Self::InGame => todo!(),
-            Self::ConfirmQuit => todo!(),
+            Self::Join => match &activation.id[..] {
+                "back" => Self::Main,
+                _ => todo!()
+            },
+            Self::Host => match &activation.id[..] {
+                "back" => Self::Main,
+                _ => todo!()
+            },
+            Self::InGame => match &activation.id[..] {
+                "back" => Self::Main,
+                _ => todo!()
+            },
+            Self::ConfirmQuit => match &activation.id[..] {
+                "back" => Self::Main,
+                _ => Self::Oblivion
+            },
+            Self::Oblivion => panic!("Ui was ticked after having requested termination")
         }
     }
     
@@ -141,6 +168,18 @@ impl MenuVariant {
     fn join_menu() -> Widget {
         uilang!(
             <Frame>
+                primary: "WHITE"
+                <Label> text: "Not yet implemented" </Label>
+                <Button>
+                    id: "back"
+                    center: "(0.4, -0.4)"
+                    scale: "(0.1, 0.1)"
+                    primary: "GRAY"
+                    secondary: "BLACK"
+                    <Label>
+                        text: "Main menu"
+                    </Label>
+                </Button>
             </Frame>
         )
     }
@@ -148,6 +187,18 @@ impl MenuVariant {
     fn host_menu() -> Widget {
         uilang!(
             <Frame>
+                primary: "WHITE"
+                <Label> text: "Not yet implemented" </Label>
+                <Button>
+                    id: "back"
+                    center: "(0.4, -0.4)"
+                    scale: "(0.1, 0.1)"
+                    primary: "GRAY"
+                    secondary: "BLACK"
+                    <Label>
+                        text: "Main menu"
+                    </Label>
+                </Button>
             </Frame>
         )
     }
@@ -155,6 +206,18 @@ impl MenuVariant {
     fn in_game_menu() -> Widget {
         uilang!(
             <Frame>
+                primary: "WHITE"
+                <Label> text: "Not yet implemented" </Label>
+                <Button>
+                    id: "back"
+                    center: "(0.4, -0.4)"
+                    scale: "(0.1, 0.1)"
+                    primary: "GRAY"
+                    secondary: "BLACK"
+                    <Label>
+                        text: "Main menu"
+                    </Label>
+                </Button>
             </Frame>
         )
     }
@@ -162,6 +225,33 @@ impl MenuVariant {
     fn confirm_quit_menu() -> Widget {
         uilang!(
             <Frame>
+                primary: "WHITE"
+                <Label>
+                    text: "Quit ?"
+                    center: "(0.0, -0.3)"
+                </Label>
+                <Frame>
+                    center: "(0.0, 0.1)"
+                    scale: "(0.4, 0.3)"
+                    <Button>
+                        id: "back"
+                        center: "(-0.25, 0.0)"
+                        scale: "(0.5, 1.0)"
+                        primary: "GREEN"
+                        <Label>
+                            text: "No"
+                        </Label>
+                    </Button>
+                    <Button>
+                        id: "quit"
+                        center: "(0.25, 0.0)"
+                        scale: "(0.5, 1.0)"
+                        primary: "RED"
+                        <Label>
+                            text: "Yes"
+                        </Label>
+                    </Button>
+                </Frame>
             </Frame>
         )
     }
