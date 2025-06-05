@@ -141,24 +141,30 @@ impl MenuVariant {
             <Frame>
                 primary: "WHITE"
                 <Frame>
+                    primary: "WHITE"
+                    secondary: "BLACK"
+                    outline: "2.0"
                     scale: "(0.5, 0.8)"
                     <Button>
                         id: "join"
-                        primary: "WHITE"
+                        primary: "GRAY"
+                        secondary: "DARKGRAY"
                         center: "(0.0, -0.26)"
                         scale: "(0.4, 0.2)"
                         <Label> text: "Join" </Label>
                     </Button>
                     <Button>
                         id: "host"
-                        primary: "WHITE"
+                        primary: "GRAY"
+                        secondary: "DARKGRAY"
                         center: "(0.0, 0.0)"
                         scale: "(0.4, 0.2)"
                         <Label> text: "Host" </Label>
                     </Button>
                     <Button>
                         id: "quit"
-                        primary: "WHITE"
+                        primary: "GRAY"
+                        secondary: "DARKGRAY"
                         center: "(0.0, 0.26)"
                         scale: "(0.4, 0.2)"
                         <Label> text: "Quit" </Label>
@@ -179,6 +185,7 @@ impl MenuVariant {
                 </Label>
                 <TextInput>
                     id: "ip"
+                    placeholder: "localhost"
                     primary: "WHITE"
                     center: "(0.0, -0.25)"
                     scale: "(0.5, 0.1)"
@@ -188,7 +195,7 @@ impl MenuVariant {
                     center: "(0.4, -0.4)"
                     scale: "(0.1, 0.1)"
                     primary: "GRAY"
-                    secondary: "BLACK"
+                    secondary: "DARKGRAY"
                     <Label>
                         text: "Main menu"
                     </Label>
@@ -207,7 +214,7 @@ impl MenuVariant {
                     center: "(0.4, -0.4)"
                     scale: "(0.1, 0.1)"
                     primary: "GRAY"
-                    secondary: "BLACK"
+                    secondary: "DARKGRAY"
                     <Label>
                         text: "Main menu"
                     </Label>
@@ -226,7 +233,7 @@ impl MenuVariant {
                     center: "(0.4, -0.4)"
                     scale: "(0.1, 0.1)"
                     primary: "GRAY"
-                    secondary: "BLACK"
+                    secondary: "DARKGRAY"
                     <Label>
                         text: "Main menu"
                     </Label>

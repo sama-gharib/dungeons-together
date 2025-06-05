@@ -69,7 +69,9 @@ enum Parameter {
     Size,
     Text,
     Primary,
-    Secondary
+    Secondary,
+    Placeholder,
+    Outline
 }
 
 
@@ -83,6 +85,8 @@ impl From<&str> for Parameter {
             "text" => Self::Text,
             "primary" => Self::Primary,
             "secondary" => Self::Secondary,
+            "placeholder" => Self::Placeholder,
+            "outline" => Self::Outline,
             _ => panic!("Error: Unknown parameter: '{s}'")
         }
     }
@@ -152,6 +156,12 @@ enum Symbol {
 
 impl Symbol {
     
+    const CONTEXTUAL_PROPERTIES: [(&str, &str, &str); 3] = [
+        ("outline", "Frame", "0.0"),
+        ("text", "Label", "\"Placeholder\".to_string()"),
+        ("placeholder", "TextInput", "\"Write here\".to_string()")
+    ];
+    
     fn ui(
         tokens: &mut Vec<Terminal>,
         index: &mut usize,
@@ -181,22 +191,23 @@ impl Symbol {
         let indentation = "\t".repeat(widget_stack.len() + 1);
         
         match current {
-            Terminal::Identifier(value) => {
-                widget_stack.push(value.clone());
-                let value = Widget::from(&value[..]);
+            Terminal::Identifier(value_s) => {
+                widget_stack.push(value_s.clone());
+                let value = Widget::from(&value_s[..]);
                 *index += 1;
                 
                 println!("Begining a {:?} widget", value);
                 
                 generated_code.push_str(&format!("Widget::new( WidgetData::{value:?} {{ "));
-                generated_code.push_str(
-                    match value {
-                        Widget::Frame     => "outline: 0.0",
-                        Widget::Label     => "text: \"Placeholder\".to_string(), font_size: 60.0",
-                        Widget::Button    => "state: ButtonState::Rest",
-                        Widget::TextInput => "placeholder: \"Placeholder\".to_string(), input: String::new(), selected: false",
-                    }
-                );
+                
+                let to_write = match value {
+                    Widget::Frame     => format!("outline: {}", Self::CONTEXTUAL_PROPERTIES[0].2),
+                    Widget::Label     => format!("text: {}, font_size: 60.0", Self::CONTEXTUAL_PROPERTIES[1].2),
+                    Widget::Button    => format!("state: ButtonState::Rest"),
+                    Widget::TextInput => format!("placeholder: {}, input: String::new(), selected: false", Self::CONTEXTUAL_PROPERTIES[2].2),
+                };
+                generated_code.push_str(&to_write);
+                
                 generated_code.push_str(
                     &format!(
                         " }} )\n{indentation}.with_relative(Layout {{center: vec2(0.0, 0.0), scale: vec2(1.0, 1.0)}})"
@@ -266,46 +277,78 @@ impl Symbol {
                     *index += 1;
                     println!("Defining a {:?} as ''{:?}'", parsed_id, value);
                     
-                    if id != "text" {
-                        let (first, last) = (value.chars().next().unwrap(), value.chars().rev().next().unwrap());
-                        if (first, last) == ('(', ')') {
-                            let s = value
-                                .chars()
-                                .filter(|x| *x != ')' && *x != '(')
-                                .collect::<String>();
-                            let s = s.split(",")
-                                .into_iter()
-                                .collect::<Vec<_>>();
-                            
-                            if s.len() != 2 { panic!("Expected 2D coordinates, found {}D", s.len()) }
-                            
-                            generated_code.push_str(&format!("\n{indentation}.with_{id}(vec2({}, {}))", s[0], s[1]));
-                        } else if id != "id"{
-                            let value: String = value.chars().filter(|x| *x != '"').collect();
-                            generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
-                        } else {
-                            generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
+                    let mut context_and_placeholder: Option<(&str, &str)> = None;
+                    for (prop, context, placeholder) in Self::CONTEXTUAL_PROPERTIES {
+                        if prop == id {
+                            context_and_placeholder = Some((context, placeholder));
                         }
-                    } else {
-                        match widget_stack.last() {
-                            Some(s) => {
-                                match &s[..] {
-                                    "Label" => {
-                                        let where_to_change = generated_code.rfind("text: \"Placeholder\".to_string(),");
+                    }
+                    
+                    match context_and_placeholder {
+                        None => {
+                            let (first, last) = (value.chars().next().unwrap(), value.chars().rev().next().unwrap());
+                            if (first, last) == ('(', ')') {
+                                let s = value
+                                    .chars()
+                                    .filter(|x| *x != ')' && *x != '(')
+                                    .collect::<String>();
+                                let s = s.split(",")
+                                    .into_iter()
+                                    .collect::<Vec<_>>();
+                                
+                                if s.len() != 2 { panic!("Expected 2D coordinates, found {}D", s.len()) }
+                                
+                                generated_code.push_str(&format!("\n{indentation}.with_{id}(vec2({}, {}))", s[0], s[1]));
+                            } else if id != "id"{
+                                let value: String = value.chars().filter(|x| *x != '"').collect();
+                                generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
+                            } else {
+                                generated_code.push_str(&format!("\n{indentation}.with_{id}({value}.into())"));
+                            }
+                        },
+                        Some((context, placeholder)) => {
+                            match widget_stack.last() {
+                                Some(s) => {
+                                    if s == context {
+                                        let to_replace = format!(
+                                            "{id}: {placeholder}"
+                                        );
+                                        const WRONG_FORMAT_ERROR: &str = "\
+                                        Hint: Here is how to format your values\n\
+                                            \tType        | Regex\n\
+                                            \t____________|_____________________________________\n\
+                                            \tString      | \\\".*\\\"\n\
+                                            \tNumber      | \\\"[0-9]*\\\\.[0-9]*\\\"\n\
+                                            \tTuple       | \\\"\\\\(Number(,Number)*\\\\)\\\"";
+                                        
+                                        let replace_with = format!(
+                                            "{id}: {value}.parse().expect(\"Value {} is ill-formated.\n{WRONG_FORMAT_ERROR}\n\")",
+                                                value
+                                                    .chars()
+                                                    .filter(|x| *x != '"')
+                                                    .collect::<String>()
+                                        );
+                                        
+                                        let where_to_change = generated_code.rfind(
+                                            &to_replace
+                                        );
                                         match where_to_change {
                                             Some(index) =>
                                                 generated_code.replace_range(
-                                                    (index + 6)..(index + 19),
-                                                    &value
+                                                    index..(index + to_replace.len()),
+                                                    &replace_with
                                                 ),
-                                            None => panic!("This error should never happen ! Found a `text` definition inside a `Label` markup with no placeholder text !")
+                                            None => /*panic!(
+                                                "This error should never happen ! Found a `{id}` definition inside a `{context}` markup with no placeholder value !"
+                                            )*/ panic!("\n{to_replace}\n\n{generated_code}")
                                         }
-                                        
-                                    },
-                                    _ => panic!("Found `text` property definition outside of label definition")
-                                }
-                            },
-                            None => panic!("Found `text` property definition outside of widget definition")
+                                            
+                                    } else {
+                                        panic!("Found `{id}` property definition outside of {context} definition")
+                                    }
+                                },
+                                None => panic!("Found `{id}` property definition outside of widget definition")
+                            }
                         }
                     }
                 } else {
