@@ -54,16 +54,19 @@ impl WidgetData {
                 })
             } else {
                 if let Some(k) = get_last_key_pressed() {
-                    if k as usize >= KeyCode::A as usize && k as usize <= KeyCode::Z as usize {
-                        text.push(format!("{k:?}").chars().next().unwrap());
-                    } else {
-                        match k {
-                            KeyCode::Backspace => {
-                                let _ = text.pop();
-                            }
-                            KeyCode::Space => text.push(' '),
-                            _ => {
-                                eprintln!("Unhandled key code : {k:?}");
+                    match k {
+                        KeyCode::Backspace => {
+                            let _ = text.pop();
+                        },
+                        KeyCode::Space => text.push(' '),
+                        KeyCode::LeftShift | KeyCode::RightShift => {
+                            // Ignored keys
+                        },
+                        _ => {
+                            text.push(get_char_pressed().unwrap_or('?'));
+                            if measure_text(&text, None, coords.h as u16, 1.0).width > coords.w {
+                                text.pop();
+                                println!("DEBUG: Text to long for text input")
                             }
                         }
                     }

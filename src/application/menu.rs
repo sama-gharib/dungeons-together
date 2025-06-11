@@ -4,6 +4,7 @@ use desi_ui::*;
 use uilang::uilang;
 use macroquad::prelude::*;
 
+
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum MenuVariant {
     Main,
