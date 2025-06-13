@@ -1,9 +1,10 @@
 use std::borrow::BorrowMut;
-use std::net::{IpAddr, SocketAddr, SocketAddrV4, TcpStream};
+use std::net::{IpAddr, SocketAddr, SocketAddrV4, TcpStream, ToSocketAddrs};
 use std::collections::HashMap;
 use std::sync::{ Mutex, Arc };
 use std::time::Duration;
 use std::borrow::Borrow;
+use std::io::ErrorKind;
 
 use macroquad::prelude::*;
 
@@ -23,6 +24,14 @@ pub struct GameClient {
     running: Arc<Mutex<bool>>,
     inbox: Arc<Mutex<Vec<Command>>>,
     to_send: Arc<Mutex<Vec<Command>>>
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ClientConnectionError {
+    UnableToResolve,
+    ServerNotFound,
+    ElapsedTimeout,
+    ServerRefused
 }
 
 impl Controlable for GameClient {
@@ -86,8 +95,8 @@ impl Drop for GameClient {
 }
 
 impl GameClient {
-    pub fn new(connection_string: &str) -> Result<Self, std::io::Error> {
-
+    pub fn new(connection_string: &str) -> Result<Self, ClientConnectionError> {
+        
         let inbox = Arc::new(Mutex::new(Vec::new()));
         let to_send = Arc::new(Mutex::new(Vec::new()));
         let running = Arc::new(Mutex::new(true));
@@ -97,12 +106,28 @@ impl GameClient {
             let inbox = inbox.clone();
             let to_send = to_send.clone();
             let running = running.clone();
-            let address: SocketAddr = connection_string.parse().unwrap();
-            let server = TcpStream::connect_timeout(
+            
+            // Performing DNS lookup on connection_string
+            let address: SocketAddr = match connection_string.to_socket_addrs() {
+                Ok(mut addrs) => match addrs.next() {
+                    Some(addr) => addr,
+                    None => return Err(ClientConnectionError::ServerNotFound)   
+                },
+                Err(_) => return Err(ClientConnectionError::UnableToResolve)
+            };
+            
+            // Connecting to server
+            let server = match TcpStream::connect_timeout(
                 &address,
                 Duration::from_secs(2)
-            )
-            .unwrap();
+            ) {
+                Ok(server) => server,
+                Err(e) => match e.kind() {
+                    ErrorKind::TimedOut => return Err(ClientConnectionError::ElapsedTimeout),
+                    ErrorKind::ConnectionRefused => return Err(ClientConnectionError::ServerRefused),
+                    _ => panic!("Unahandled client connection error !")
+                }
+            };
             
             std::thread::spawn(move || Self::network_worker(server, inbox, to_send, running))
         };

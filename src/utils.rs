@@ -1,6 +1,6 @@
 use std::ffi::c_void;
-
-use macroquad::math::Vec2;
+use std::mem;
+use std::ops::{ Index, IndexMut };
 
 unsafe extern "C" {
     fn srand(seed: usize);
@@ -55,3 +55,68 @@ pub trait DefaultBehaviour {
 pub fn base_format(n: u8, base: u8) -> String {
     format!("{}{}", (n/base)%base, n%base)
 }
+
+#[derive(Clone, Debug)]
+pub struct DiscriminantMap<Key, Value> {
+    data: Vec<(Key, Value)>
+}
+
+impl <Key, Value> Default for DiscriminantMap<Key, Value> {
+    fn default() -> Self {
+        Self {
+            data: Vec::new()
+        }
+    }
+}
+
+impl <Key, Value> Index<&Key> for DiscriminantMap<Key, Value> {
+    type Output = Value;
+    
+    fn index(&self, what: &Key) -> &Self::Output {
+        self.get(what).expect("Index not found.")
+    }
+}
+
+impl <Key, Value> IndexMut<&Key> for DiscriminantMap<Key, Value> {
+    
+    fn index_mut(&mut self, what: &Key) -> &mut Self::Output {
+        self.get_mut(what).expect("Index not found.")
+    }
+}
+
+impl <Key, Value> DiscriminantMap<Key, Value> {
+    pub fn push(&mut self, key: Key, value: Value) {
+        self.data.push((key, value));
+    }
+    
+    pub fn get(&self, what: &Key) -> Option<&Value> {
+        for (key, value) in self.data.iter() {
+            if mem::discriminant(what) == mem::discriminant(&key) {
+                return Some(&value);
+            }
+        }
+        None
+    }
+    
+    pub fn get_mut(&mut self, what: &Key) -> Option<&mut Value> {
+        for (key, value) in self.data.iter_mut() {
+            if mem::discriminant(what) == mem::discriminant(&key) {
+                return Some(value);
+            }
+        }
+        None   
+    }
+    
+    pub fn has_value_for(&self, what: Key) -> bool {
+        self.data
+            .iter()
+            .map(|(key, _)| 
+                mem::discriminant(key)
+            )
+            .collect::<Vec<_>>()
+            .contains(&mem::discriminant(&what))
+    }
+}
+
+
+

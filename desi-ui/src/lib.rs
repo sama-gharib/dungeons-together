@@ -149,8 +149,8 @@ impl WidgetData {
             WidgetData::Label { .. } => Self::activate_label(),
             WidgetData::Button { state, .. } => Self::activate_button(id, layout, state),
             WidgetData::TextInput {
-                input, selected, ..
-            } => Self::activate_text_input(id, layout, input, selected),
+                input, selected, placeholder
+            } => Self::activate_text_input(id, layout, placeholder, input, selected),
         }
     }
 

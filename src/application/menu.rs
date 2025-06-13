@@ -1,14 +1,15 @@
-use std::collections::HashMap;
+use std::mem;
 
 use desi_ui::*;
 use uilang::uilang;
 use macroquad::prelude::*;
 
+use crate::utils::DiscriminantMap;
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum MenuVariant {
     Main,
-    Join,
+    Join { name: Option<String>, ip: Option<String>, port: Option<String> },
     Host,
     InGame,
     ConfirmQuit,
@@ -16,7 +17,7 @@ pub enum MenuVariant {
 }
 
 pub struct Ui {
-    data: HashMap<MenuVariant, Widget>,
+    data: DiscriminantMap<MenuVariant, Widget>,
     current: MenuVariant,
     terminated: bool
 }
@@ -24,7 +25,7 @@ pub struct Ui {
 impl Ui {
     const ACTIVATED_MENUS: [MenuVariant; 6] = [
         MenuVariant::Main,
-        MenuVariant::Join,
+        MenuVariant::Join { name: None, ip: None, port: None },
         MenuVariant::Host,
         MenuVariant::InGame,
         MenuVariant::ConfirmQuit,
@@ -35,7 +36,10 @@ impl Ui {
         self.terminated
     }
     pub fn get_current(&self) -> MenuVariant {
-        self.current
+        self.current.clone()
+    }
+    pub fn get_current_mut(&mut self) -> &mut MenuVariant {
+        &mut self.current
     }
     
     pub fn switch_menu(&mut self, next: MenuVariant) {
@@ -84,12 +88,12 @@ impl Ui {
 impl Default for Ui {
     fn default() -> Self {
         
-        let mut data = HashMap::new();
-        Self::ACTIVATED_MENUS.iter().for_each(|x| { data.insert(*x, x.build_ui()); });
+        let mut data = DiscriminantMap::default();
+        Self::ACTIVATED_MENUS.iter().for_each(|x| { data.push(x.clone(), x.build_ui()); });
                         
         Self {
             data,
-            current: Self::ACTIVATED_MENUS[0],
+            current: Self::ACTIVATED_MENUS[0].clone(),
             terminated: false
         }
     }
@@ -98,11 +102,10 @@ impl Default for Ui {
 impl MenuVariant {
     pub fn build_ui(&self) -> Widget {
         match self {
-            Self::Main => Self::main_menu(),
             MenuVariant::Main => Self::main_menu(),
-            MenuVariant::Join => Self::join_menu(),
+            MenuVariant::Join { .. } => Self::join_menu(),
             MenuVariant::Host => Self::host_menu(),
-            MenuVariant::InGame => Self::in_game_menu(),
+            MenuVariant::InGame { .. } => Self::in_game_menu(),
             MenuVariant::ConfirmQuit => Self::confirm_quit_menu(),
             MenuVariant::Oblivion => Widget::default()
         }
@@ -112,14 +115,26 @@ impl MenuVariant {
     pub fn apply(&self, activation: Activation) -> Self {
         match self {
             Self::Main => match &activation.id[..]  {
-                "join" => Self::Join,
+                "join" => Self::Join { name: None, ip: None, port: None } ,
                 "host" => Self::Host,
                 "quit" => Self::ConfirmQuit,
                 _      => Self::Main
             },
-            Self::Join => match &activation.id[..] {
+            Self::Join { name, ip, port } => match &activation.id[..] {
                 "back" => Self::Main,
-                _ => todo!()
+                "name" => {
+                    Self::Join {name: Some(activation.message.unwrap()), ip: ip.clone(), port: port.clone()}
+                },
+                "ip" => {
+                    Self::Join {name: name.clone(), ip: Some(activation.message.unwrap()), port: port.clone()}
+                },
+                "port" => {
+                    Self::Join {name: name.clone(), ip: ip.clone(), port: Some(activation.message.unwrap())}
+                },
+                "join" => {
+                    Self::InGame
+                },
+                _ => { todo!() }
             },
             Self::Host => match &activation.id[..] {
                 "back" => Self::Main,
@@ -185,12 +200,36 @@ impl MenuVariant {
                     scale: "(0.5, 0.2)"
                 </Label>
                 <TextInput>
-                    id: "ip"
-                    placeholder: "localhost"
+                    id: "name"
+                    placeholder: "name"
                     primary: "WHITE"
                     center: "(0.0, -0.25)"
                     scale: "(0.5, 0.1)"
                 </TextInput>
+                <TextInput>
+                    id: "ip"
+                    placeholder: "localhost"
+                    primary: "WHITE"
+                    center: "(0.0, -0.05)"
+                    scale: "(0.5, 0.1)"
+                </TextInput>
+                <TextInput>
+                    id: "port"
+                    placeholder: "53000"
+                    primary: "WHITE"
+                    center: "(0.0, 0.15)"
+                    scale: "(0.5, 0.1)"
+                </TextInput>
+                <Button>
+                    id: "join"
+                    center: "(0.0, 0.35)"
+                    scale: "(0.1, 0.1)"
+                    primary: "GRAY"
+                    secondary: "DARKGRAY"
+                    <Label>
+                        text: "Connect"
+                    </Label>
+                </Button>
                 <Button>
                     id: "back"
                     center: "(0.4, -0.4)"
