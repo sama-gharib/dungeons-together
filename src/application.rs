@@ -1,9 +1,12 @@
+use std::mem;
+
 use macroquad::window::next_frame;
 use menu::{MenuVariant, Ui};
 
 use crate::network::{
     GameAgent,
-    client::GameClient
+    client::GameClient,
+    server::GameServer
 };
 
 mod menu;
@@ -24,6 +27,7 @@ impl Application {
             let current = self.ui.get_current_mut();
             
             if let Some(game) = &mut self.game {
+                game.handle_events();
                 game.update();
                 game.draw();
             }
@@ -45,8 +49,12 @@ impl Application {
                         }
                 }
                 },
-                (MenuVariant::Host, MenuVariant::InGame) => todo!(),
-                (_, _) => {}
+                (MenuVariant::Host { port }, MenuVariant::InGame) => {
+                    self.game = Some(Box::new(GameServer::new(&format!("0.0.0.0:{}", port.unwrap())).unwrap()));
+                },
+                (MenuVariant::InGame, MenuVariant::InGame) => {},
+                (MenuVariant::InGame, _) => { self.game = None },
+                _ => {}
             }
             
             if self.ui.is_terminated() {

@@ -64,10 +64,10 @@ impl Drawable for GameClient {
                 r.w,
                 r.h,
                 BLUE);
-            draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, WHITE);
+            draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, BLUE);
         }
         
-        draw_rectangle(self.player.x, self.player.y, self.player.w, self.player.h, WHITE);
+        draw_rectangle(self.player.x, self.player.y, self.player.w, self.player.h, RED);
     }
 }
 

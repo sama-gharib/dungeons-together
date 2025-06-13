@@ -39,7 +39,7 @@ impl Controlable for GameServer {
 
 impl Drawable for GameServer {
     fn draw(&self) {
-        draw_text("todo", 200.0, 200.0, 16.0, RED);
+        draw_text("todo", 200.0, 200.0, 48.0, RED);
         
         for client in self.clients.iter() {
             draw_rectangle(client.position.x, client.position.y, 100.0, 100.0, BLUE);
@@ -114,7 +114,7 @@ impl GameServer {
                         },
                         Command::Despawn(id) => {
                             *id = client.id;
-                            disconnections.push(*id);
+                            disconnections.push((index, *id));
                             true  
                         },
                         _ => true
@@ -126,7 +126,7 @@ impl GameServer {
                 Err(e) => match e {
                     ProtocolError::Disconnection => {
                         self.to_broadcast.push_back((Command::Despawn(client.id), client.id));
-                        disconnections.push(index);
+                        disconnections.push((index, client.id));
                     },
                     ProtocolError::OutdatedPackage => {
                         // TODO  
@@ -142,9 +142,9 @@ impl GameServer {
         }
    
         
-        for i in disconnections {
-            self.log(&format!("Client {} disconnected.", self.clients[i].id));
-            self.clients.remove(i);
+        for (index, id) in disconnections {
+            self.log(&format!("Client {} disconnected.", id));
+            self.clients.remove(index);
         }
     }
     
@@ -182,7 +182,7 @@ impl GameServer {
             for client in self.clients.iter_mut() {
                 if target == client.id {
                     if let Err(e) = client.protocol.send(&mut client.stream, command) {
-                        println!("Failed to send a message : {e:?}");
+                        println!("\rFailed to send a message : {e:?}                               ");
                     }
                     break;
                 }
@@ -194,7 +194,7 @@ impl GameServer {
         let (hour, minute, second) = Time::hour();
     
         println!(
-            "[{}:{}:{}] {} > {message}",
+            "\r[{}:{}:{}] {} > {message}                                                ",
             base_format(hour, 10),
             base_format(minute, 10),
             base_format(second, 10),

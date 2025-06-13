@@ -10,7 +10,7 @@ use crate::utils::DiscriminantMap;
 pub enum MenuVariant {
     Main,
     Join { name: Option<String>, ip: Option<String>, port: Option<String> },
-    Host,
+    Host { port: Option<String> },
     InGame,
     ConfirmQuit,
     Oblivion
@@ -26,7 +26,7 @@ impl Ui {
     const ACTIVATED_MENUS: [MenuVariant; 6] = [
         MenuVariant::Main,
         MenuVariant::Join { name: None, ip: None, port: None },
-        MenuVariant::Host,
+        MenuVariant::Host { port: None },
         MenuVariant::InGame,
         MenuVariant::ConfirmQuit,
         MenuVariant::Oblivion
@@ -104,7 +104,7 @@ impl MenuVariant {
         match self {
             MenuVariant::Main => Self::main_menu(),
             MenuVariant::Join { .. } => Self::join_menu(),
-            MenuVariant::Host => Self::host_menu(),
+            MenuVariant::Host { .. } => Self::host_menu(),
             MenuVariant::InGame { .. } => Self::in_game_menu(),
             MenuVariant::ConfirmQuit => Self::confirm_quit_menu(),
             MenuVariant::Oblivion => Widget::default()
@@ -116,7 +116,7 @@ impl MenuVariant {
         match self {
             Self::Main => match &activation.id[..]  {
                 "join" => Self::Join { name: None, ip: None, port: None } ,
-                "host" => Self::Host,
+                "host" => Self::Host { port: None },
                 "quit" => Self::ConfirmQuit,
                 _      => Self::Main
             },
@@ -136,8 +136,10 @@ impl MenuVariant {
                 },
                 _ => { todo!() }
             },
-            Self::Host => match &activation.id[..] {
+            Self::Host { .. } => match &activation.id[..] {
                 "back" => Self::Main,
+                "start" => Self::InGame,
+                "port" => Self::Host { port: Some(activation.message.unwrap()) },
                 _ => todo!()
             },
             Self::InGame => match &activation.id[..] {
@@ -208,7 +210,7 @@ impl MenuVariant {
                 </TextInput>
                 <TextInput>
                     id: "ip"
-                    placeholder: "localhost"
+                    placeholder: "0.0.0.0"
                     primary: "WHITE"
                     center: "(0.0, -0.05)"
                     scale: "(0.5, 0.1)"
@@ -248,7 +250,22 @@ impl MenuVariant {
         uilang!(
             <Frame>
                 primary: "WHITE"
-                <Label> text: "Not yet implemented" </Label>
+                <TextInput>
+                    id: "port"
+                    primary: "WHITE"
+                    secondary: "BLACK"
+                    placeholder: "53000"
+                    center: "(0.0, 0.0)"
+                    scale: "(0.4, 0.1)"
+                </TextInput>
+                <Button>
+                    id: "start"
+                    center: "(0.0, 0.2)"
+                    scale: "(0.2, 0.2)"
+                    primary: "GRAY"
+                    secondary: "DARKGRAY"
+                    <Label> text: "Start server" </Label>
+                </Button>
                 <Button>
                     id: "back"
                     center: "(0.4, -0.4)"

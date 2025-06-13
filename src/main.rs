@@ -13,7 +13,7 @@ async fn main() {
     Random::seed();
     let mut app = Application::default();
     app.run().await;
-    println!("Finished !");
+    println!("\nFinished !");
 }
 
 /*
