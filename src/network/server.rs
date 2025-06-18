@@ -1,13 +1,11 @@
 use macroquad::prelude::*;
 
-use std::net::{ SocketAddr, TcpListener, TcpStream };
+use std::net::{ TcpListener, TcpStream };
 use std::io::{ Write, Error };
-use std::thread::sleep;
-use std::time::Duration;
 use std::collections::VecDeque;
 
-use crate::game::{ Controlable, Drawable, Dynamic };
-use crate::utils::{ base_format, DefaultBehaviour, Random, Time };
+use crate::utils::{ Controlable, Drawable, Dynamic };
+use crate::utils::{ base_format, Random, Time };
 
 use super::{Command, GameAgent, Protocol, ProtocolError};
 
@@ -32,8 +30,8 @@ pub struct GameServer {
 impl GameAgent for GameServer { }
 
 impl Controlable for GameServer {
-    fn handle_events(&mut self) {
-        // TODO
+    fn handle_events(&mut self) -> bool {
+        false
     }
 }
 
@@ -129,10 +127,10 @@ impl GameServer {
                         disconnections.push((index, client.id));
                     },
                     ProtocolError::OutdatedPackage => {
-                        // TODO  
+                        // TODO
                     },
                     ProtocolError::IllFormatedSequenceNumber => {
-                        // TODO  
+                        // TODO
                     },
                     ProtocolError::WrongSequence => {
                         // TODO

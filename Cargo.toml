@@ -9,5 +9,8 @@ path = "desi-ui"
 [dependencies.uilang]
 path = "uilang"
 
+[dependencies.auto_with]
+path = "auto_with"
+
 [dependencies]
 macroquad = "0.4.14"

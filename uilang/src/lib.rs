@@ -58,8 +58,7 @@
 //! Newlines and indentations are ignored.
 
 
-use proc_macro::{ Literal, TokenStream, TokenTree };
-use desi_ui::{ WidgetData };
+use proc_macro::{ TokenStream, TokenTree };
 
 /// The list of valid parameters
 #[derive(Debug)]
@@ -174,7 +173,7 @@ impl Symbol {
                 Self::begin(tokens, index, widget_stack, generated_code);
                 Self::params(tokens, index, widget_stack, generated_code);
                 Self::children(tokens, index, widget_stack, generated_code);
-                Self::end(tokens, index, widget_stack, generated_code);
+                Self::end(tokens, index, widget_stack);
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", NonTerminal::Begin)
         }
@@ -195,9 +194,7 @@ impl Symbol {
                 widget_stack.push(value_s.clone());
                 let value = Widget::from(&value_s[..]);
                 *index += 1;
-                
-                println!("Begining a {:?} widget", value);
-                
+                                
                 generated_code.push_str(&format!("Widget::new( WidgetData::{value:?} {{ "));
                 
                 let to_write = match value {
@@ -221,8 +218,7 @@ impl Symbol {
     fn end(
         tokens: &mut Vec<Terminal>, 
         index: &mut usize, 
-        widget_stack: &mut Vec<String>,
-        generated_code: &mut String
+        widget_stack: &mut Vec<String>
     ) {
         Self::check_terminal(tokens, Terminal::EndingTag, index);
         let current = tokens[*index].clone();
@@ -235,7 +231,6 @@ impl Symbol {
                     }
                 } 
                 *index += 1;
-                println!("Ending a {:?} widget", value);
             },
             _ => panic!("Unexpected token : {current:?}. Expected {:?}", Terminal::OpeningTag)
         }
@@ -270,12 +265,10 @@ impl Symbol {
         
         match current {
             Terminal::Identifier(id) => {
-                let parsed_id = Parameter::from(&id[..]);
                 *index += 1;
                 Self::check_terminal(tokens, Terminal::Assignation, index);
                 if let Terminal::Literal(value) = tokens[*index].clone() {
                     *index += 1;
-                    println!("Defining a {:?} as ''{:?}'", parsed_id, value);
                     
                     let mut context_and_placeholder: Option<(&str, &str)> = None;
                     for (prop, context, placeholder) in Self::CONTEXTUAL_PROPERTIES {
@@ -370,7 +363,6 @@ impl Symbol {
         
         match current {
             Terminal::OpeningTag => {
-                println!("Next line is a child");
                 
                 generated_code.push_str(&format!("\n{indentation}.with_child("));
                 Self::ui(tokens, index, widget_stack, generated_code);
@@ -461,9 +453,7 @@ pub fn uilang(input: TokenStream) -> TokenStream {
     
     Symbol::ui(&mut parsed, &mut index, &mut widget_stack, &mut generated_code);
     
-    println!("{generated_code}");
     
     
     generated_code.parse().unwrap()
-    // "0u8".parse().unwrap()
 }

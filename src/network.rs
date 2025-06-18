@@ -2,9 +2,9 @@ use macroquad::prelude::*;
 
 use std::str::FromStr;
 use std::net::TcpStream;
-use std::io::{ BufRead, BufReader, Error, ErrorKind, Read, Write };
+use std::io::{ BufRead, BufReader, ErrorKind, Read, Write };
 
-use crate::game::{ Dynamic, Drawable, Controlable };
+use crate::utils::{ Dynamic, Drawable, Controlable };
 
 pub mod client;
 pub mod server;

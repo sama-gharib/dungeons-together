@@ -1,22 +1,25 @@
 use std::borrow::BorrowMut;
-use std::net::{IpAddr, SocketAddr, SocketAddrV4, TcpStream, ToSocketAddrs};
+use std::net::{ SocketAddr, TcpStream, ToSocketAddrs};
 use std::collections::HashMap;
 use std::sync::{ Mutex, Arc };
 use std::time::Duration;
-use std::borrow::Borrow;
 use std::io::ErrorKind;
+use std::thread::JoinHandle;
 
 use macroquad::prelude::*;
 
-use crate::game::{ Body, Controlable, Drawable, Dynamic };
+use crate::game::{
+    component::*,
+    subject::GameSubject
+};
+use crate::utils::{ Controlable, Drawable, Dynamic };
 
 use super::{ Protocol, Command, GameAgent };
 
-use std::thread::{self, JoinHandle};
 
 pub struct GameClient {
     network_thread: JoinHandle<()>,
-    player: Rect,
+    player: GameComponent,
     others: HashMap<usize, Rect>,
     has_moved: bool,
     
@@ -35,22 +38,12 @@ pub enum ClientConnectionError {
 }
 
 impl Controlable for GameClient {
-    fn handle_events(&mut self) {
-        let last_pos = self.player.point();
-        if is_key_down(KeyCode::Right) {
-            self.player.x += 5.0;
-        }
-        if is_key_down(KeyCode::Left) {
-            self.player.x -= 5.0;
-        }
-        if is_key_down(KeyCode::Up) {
-            self.player.y -= 5.0;
-        }
-        if is_key_down(KeyCode::Down) {
-            self.player.y += 5.0;
-        }
-        if self.player.point() != last_pos {
+    fn handle_events(&mut self) -> bool {
+        if self.player.handle_events() {
             self.has_moved = true;
+            true
+        } else {
+            false
         }
     }
 }
@@ -67,7 +60,7 @@ impl Drawable for GameClient {
             draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, BLUE);
         }
         
-        draw_rectangle(self.player.x, self.player.y, self.player.w, self.player.h, RED);
+        self.player.draw();
     }
 }
 
@@ -75,9 +68,10 @@ impl GameAgent for GameClient {}
 
 impl Dynamic for GameClient {
     fn update(&mut self) {
+        self.player.update();
         if self.has_moved {
             if let Ok(mut to_send) = self.to_send.borrow_mut().lock() {
-                to_send.push(Command::Reposition(0, self.player.point()));
+                to_send.push(Command::Reposition(0, self.player.body().position()));
                 self.has_moved = false;
             }
         }
@@ -134,7 +128,11 @@ impl GameClient {
         
         Ok(Self {
             network_thread,
-            player: Rect { x: 100.0, y: 100.0, w: 100.0, h: 100.0 },
+            player: GameComponent::from(
+                GameComponentVariant::Subject(
+                    GameSubject::default()
+                )
+            ),
             others: HashMap::new(),
             has_moved: true,
             running,
@@ -155,7 +153,6 @@ impl GameClient {
         let mut protocol = Protocol::new();
         
         loop {
-            println!("A");
             // Reception
             if let Ok(command) = protocol.reception(&mut server) {
                 inbox.borrow_mut().lock().unwrap().push(command);

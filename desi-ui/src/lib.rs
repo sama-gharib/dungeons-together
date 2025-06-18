@@ -1,6 +1,8 @@
 //! This crate enables to create and manage very simple UIs with [macroquad](https://macroquad.rs/).
 
 use macroquad::prelude::*;
+use auto_with::with;
+
 
 use std::ops::Mul;
 
@@ -183,11 +185,16 @@ impl Widget {
     }
 
     // == Builders ==
+
+    with!{relative: Layout}
+    with!{primary: Color}
+    with!{secondary: Color}
+    
     pub fn with_id(mut self, id: &str) -> Self {
         self.id = id.to_owned();
         self
     }
-
+    
     pub fn with_center(mut self, center: Vec2) -> Self {
         self.relative.center = center;
         self    
@@ -198,26 +205,11 @@ impl Widget {
         self
     }
     
-    pub fn with_relative(mut self, relative: Layout) -> Self {
-        self.relative = relative;
-        self
-    }
-
-    pub fn with_primary(mut self, color: Color) -> Self {
-        self.primary = color;
-        self
-    }
-
-    pub fn with_secondary(mut self, color: Color) -> Self {
-        self.secondary = color;
-        self
-    }
-
     pub fn with_child(mut self, child: Self) -> Self {
         self.children.push(child);
         self
     }
-
+    
     // === Recursives ===
 
     pub fn update_absolutes(&mut self, parent_absolute: Layout) {

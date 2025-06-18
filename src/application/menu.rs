@@ -1,5 +1,3 @@
-use std::mem;
-
 use desi_ui::*;
 use uilang::uilang;
 use macroquad::prelude::*;

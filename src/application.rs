@@ -1,5 +1,3 @@
-use std::mem;
-
 use macroquad::window::next_frame;
 use menu::{MenuVariant, Ui};
 

@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use super::{Activation, ButtonState, Layout, Widget, WidgetData};
+use super::{Activation, ButtonState, Layout, WidgetData};
 
 impl WidgetData {
     pub fn activate_button(

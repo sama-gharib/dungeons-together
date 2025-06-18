@@ -118,5 +118,14 @@ impl <Key, Value> DiscriminantMap<Key, Value> {
     }
 }
 
+pub trait Drawable {
+    fn draw(&self);
+}
 
+pub trait Dynamic {
+    fn update(&mut self);
+}
 
+pub trait Controlable {
+    fn handle_events(&mut self) -> bool;
+}

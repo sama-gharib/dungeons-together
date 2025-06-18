@@ -3,5 +3,8 @@ name = "desi-ui"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies.auto_with]
+path = "../auto_with"
+
 [dependencies]
 macroquad = "0.4.14"
