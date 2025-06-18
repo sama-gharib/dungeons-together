@@ -13,14 +13,15 @@ This game will be a multiplayer 2D dungeon crawler.
 
 1. Basic network protocol
 1. Basic UI library
+1. `uilang` macro (enables to create UIs with a custom HTML-like markup language)
+1. Simple yet nice UI
 
 ## What's being done ?
 
-1. The `uilang` procedural macro crate (enables to create UIs with a custom HTML-like markup language)
-1. The connection menu
+1. The game in itself
 
 ## What's to do ?
 
-1. Add clear documentation
-1. Make UI not ugly
-1. Code the game (would be a nice idea)
+1. Enhance netcode (occasionnal flickers and quick crowding of queue)
+1. Sprites and images
+1. A lobby
