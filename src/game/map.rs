@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 use auto_with::with;
 
 use std::ops::{BitAnd, BitOr};
+use std::collections::VecDeque;
 
 use super::component::{ GameComponent, GameComponentVariant };
 use super::object::GameObject;
@@ -111,11 +112,14 @@ impl Map {
         
         
         let mut new_map = Vec::<Room>::new();
-        let mut room_matrix: Vec<Vec<Option<Room>>> = vec![vec![None; max_width]; max_height];
-        let mut generation_stack: Vec<((usize, usize), AccessFlag)> = vec![((max_height/2, max_width/2), Direction::UP.flag)];
-                
+        let mut room_matrix: Vec<Vec<bool>> = vec![vec![false; max_width]; max_height];           
+        let mut generation_stack = VecDeque::<((usize, usize), AccessFlag)>::new();
+        
+        generation_stack.push_back(((max_height/2, max_width/2), Direction::UP.flag));
+        room_matrix[max_height/2][max_width/2] = true;
+                  
         loop {
-            match generation_stack.pop() {
+            match generation_stack.pop_back() {
                 Some((cursor, constraint)) => {                    
                     let constraint = constraint.opposite();
                     
@@ -130,7 +134,6 @@ impl Map {
                     
                     let new_room = new_room.unwrap().with_indices(cursor.0, cursor.1);
                     new_map.push(new_room.clone());
-                    room_matrix[cursor.0][cursor.1] = Some(new_room.clone());
                     
                     for (direction, flag) in new_room.access_flag.directions() {
                         let mut next_coord = (cursor.0 as i32 + direction.0, cursor.1 as i32 + direction.1);
@@ -138,15 +141,16 @@ impl Map {
                         next_coord.1 = next_coord.1.min(max_width as i32 - 1).max(0);
                         let next_coord = (next_coord.0 as usize, next_coord.1 as usize);
                         
-                        if let None = room_matrix[next_coord.0][next_coord.1] {
-                            generation_stack.push((next_coord, flag));
+                        if !room_matrix[next_coord.0][next_coord.1] {
+                            generation_stack.push_back((next_coord, flag));
+                            room_matrix[next_coord.0][next_coord.1] = true;
                         }
                     }
                 },
                 None => break
             }
         }
-        
+                
         Map {
             rooms: new_map
         }

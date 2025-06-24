@@ -1,6 +1,8 @@
+use std::collections::VecDeque;
+
 use application::Application;
 
-use macroquad::window::next_frame;
+use macroquad::prelude::*;
 use utils::{Drawable, Random};
 
 mod utils;
@@ -17,9 +19,14 @@ async fn main() {
     app.run().await;
     println!("\nFinished !");*/
     
+    
     let map = Map::generate(50, 50);
     let mut frame_count: usize = 0;
     loop{
+        if is_key_pressed(KeyCode::Space) {
+            frame_count = 0;
+        }
+        
         for room in map.rooms.iter().take(frame_count*20) {
             for component in room.components.iter() {
                 if let Some(component) = component {
