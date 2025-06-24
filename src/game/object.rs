@@ -1,5 +1,6 @@
 use crate::utils::Drawable;
 
+#[derive(Debug, Clone)]
 pub enum GameObject {
     CheckPoint { priority: usize },
     Wall,

@@ -4,9 +4,9 @@ use auto_with::with;
 
 #[derive(Debug, Clone)]
 pub struct Body {
-    position: Vec2,
-    size: Vec2,
-    velocity: Vec2,
+    pub position: Vec2,
+    pub size: Vec2,
+    pub velocity: Vec2,
     pub friction_factor: f32
 }
 

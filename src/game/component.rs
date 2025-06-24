@@ -7,6 +7,7 @@ use super::subject::*;
 use super::object::*;
 use super::body::*;
 
+#[derive(Debug, Clone)]
 pub enum GameComponentVariant {
     Subject (GameSubject),
     Object (GameObject)
@@ -21,9 +22,10 @@ impl Controlable for GameComponentVariant {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct GameComponent {
-    body: Body,
-    variant: GameComponentVariant
+    pub body: Body,
+    pub variant: GameComponentVariant
 }
 
 impl Drawable for GameComponent {

@@ -4,6 +4,7 @@ use crate::utils::Controlable;
 
 use super::keys::*;
 
+#[derive(Debug, Clone)]
 pub struct GameSubject {
     controls: KeyBinding,
     speed: f32,

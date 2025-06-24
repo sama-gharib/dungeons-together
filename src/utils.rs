@@ -45,6 +45,28 @@ impl Random {
     pub fn between(min: usize, max: usize) -> usize {
         Self::max(max - min) + min
     }
+    
+    pub fn choice<T: Clone>(within: &[T]) -> T {
+        within[Self::max(within.len())].clone()
+    }
+    
+    pub fn choice_if<T: Clone>(within: &[T], condition: impl Fn(&T) -> bool) -> Option<T> {
+        let mut ok = false;
+        for e in within.iter() {
+            if condition(e) {
+                ok = true;
+                break;
+            }
+        }
+        if !ok { return None }
+        
+        loop {
+            let current = Self::choice(within);
+            if condition(&current) {
+                return Some(current);
+            }
+        }
+    }
 }
 
 pub trait DefaultBehaviour {

@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 
+#[derive(Debug, Clone)]
 pub struct DirectionKeys {
     pub up: KeyCode,
     pub left: KeyCode,
@@ -28,6 +29,7 @@ impl DirectionKeys {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct KeyBinding {
     pub slide: DirectionKeys,
     pub look: DirectionKeys,
