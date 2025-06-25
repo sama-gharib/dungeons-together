@@ -19,7 +19,6 @@ async fn main() {
     app.run().await;
     println!("\nFinished !");*/
     
-    
     let map = Map::generate(50, 50);
     let mut frame_count: usize = 0;
     loop{
@@ -27,7 +26,7 @@ async fn main() {
             frame_count = 0;
         }
         
-        for room in map.rooms.iter().take(frame_count*20) {
+        for room in map.rooms.iter().take(frame_count*10) {
             for component in room.components.iter() {
                 if let Some(component) = component {
                     component.draw();

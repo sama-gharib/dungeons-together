@@ -112,7 +112,8 @@ impl Map {
         
         
         let mut new_map = Vec::<Room>::new();
-        let mut room_matrix: Vec<Vec<bool>> = vec![vec![false; max_width]; max_height];           
+        let mut room_matrix: Vec<Vec<bool>> = vec![vec![false; max_width]; max_height];
+        // Using a VecDeque rather than a Vec enables to easily switch from DFS to BFS 
         let mut generation_stack = VecDeque::<((usize, usize), AccessFlag)>::new();
         
         generation_stack.push_back(((max_height/2, max_width/2), Direction::UP.flag));
@@ -185,10 +186,14 @@ impl Room {
     pub const WIDTH:  f32 = 16.0;
     pub const HEIGHT: f32 = 12.0;
     
-    pub const VARIANTS: [Self; 3] = [
+    pub const VARIANTS: [Self; 7] = [
         Self::H_CORRIDOR,
         Self::V_CORRIDOR,
-        Self::CROSSROADS
+        Self::CROSSROADS,
+        Self::T_UP,
+        Self::T_LEFT,
+        Self::T_DOWN,
+        Self::T_RIGHT
     ];
     
     pub const EMPTY: Self = Self {
@@ -217,6 +222,46 @@ impl Room {
             wall!(0.0, 0.0, 0.25, 1.0),
             wall!(0.75, 0.0, 0.25, 1.0),
             None,
+            None
+        ]
+    };
+    
+    pub const T_UP: Self = Self {
+        access_flag: combine_flags!(Direction::UP, Direction::LEFT, Direction::RIGHT),
+        components: [
+            wall!(0.0, 0.0, 0.25, 0.25),
+            wall!(0.75, 0.0, 0.25, 0.25),
+            wall!(0.0, 0.75, 1.0, 0.25),
+            None
+        ]
+    };
+    
+    pub const T_LEFT: Self = Self {
+        access_flag: combine_flags!(Direction::UP, Direction::LEFT, Direction::DOWN),
+        components: [
+            wall!(0.0, 0.0, 0.25, 0.25),
+            wall!(0.0, 0.75, 0.25, 0.25),
+            wall!(0.75, 0.0, 0.25, 1.0),
+            None
+        ]
+    };
+    
+    pub const T_DOWN: Self = Self {
+        access_flag: combine_flags!(Direction::LEFT, Direction::DOWN, Direction::RIGHT),
+        components: [
+            wall!(0.0, 0.0, 1.0, 0.25),
+            wall!(0.0, 0.75, 0.25, 0.25),
+            wall!(0.75, 0.75, 0.25, 0.25),
+            None
+        ]
+    };
+    
+    pub const T_RIGHT: Self = Self {
+        access_flag: combine_flags!(Direction::UP, Direction::DOWN, Direction::RIGHT),
+        components: [
+            wall!(0.0, 0.0, 0.25, 1.0),
+            wall!(0.75, 0.0, 0.25, 0.25),
+            wall!(0.75, 0.75, 0.25, 0.25),
             None
         ]
     };
