@@ -3,7 +3,7 @@ use std::mem;
 use std::ops::{ Index, IndexMut };
 
 unsafe extern "C" {
-    fn srand(seed: usize);
+    pub fn srand(seed: usize);
     fn rand() -> usize;
     
     fn time(ptr: *mut c_void) -> usize;

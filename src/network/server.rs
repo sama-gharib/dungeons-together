@@ -21,6 +21,8 @@ pub struct GameServer {
     listener: TcpListener,
     clients: Vec<Client>,
     
+    map_seed: usize,
+    
     to_broadcast: VecDeque<(Command, usize)>,
     to_send: VecDeque<(Command, usize)>,
     
@@ -60,6 +62,8 @@ impl Dynamic for GameServer {
 impl GameServer {
     const SOCKET_DELAY: u64 = 16;
     
+    pub const MAP_WIDTH: usize = 50;
+    pub const MAP_HEIGHT: usize = 50;
     
     pub fn new(connection_string: &str) -> Result<Self, Error> {
         let listener = TcpListener::bind(connection_string)?;
@@ -68,6 +72,7 @@ impl GameServer {
         Ok(Self {
             listener,
             clients: Default::default(),
+            map_seed: Random::any(),
             to_broadcast: Default::default(),
             to_send: Default::default(),
             connection_string: connection_string.to_string()
@@ -81,7 +86,7 @@ impl GameServer {
                 
                 let new_id = Random::any();
                 self.log(&format!("New client connected : {}", new_id));
-                
+                self.to_send.push_back((Command::ChangeMap(self.map_seed), new_id));
                 for client in self.clients.iter() {
                     self.to_send.push_back((Command::Spawn(client.id), new_id));
                 }

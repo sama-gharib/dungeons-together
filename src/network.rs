@@ -60,7 +60,8 @@ pub enum Command {
     Reposition (usize, Vec2),
     Despawn(usize),
     Unknown,
-    IllFormated (FormatError)
+    IllFormated (FormatError),
+    ChangeMap (usize)
 }
 
 impl From<&[u8]> for Command {
@@ -83,6 +84,10 @@ impl From<&[u8]> for Command {
                     4 => match ShareableType::<usize>::parse(&mut iterator) {
                         Ok(id) => Command::Despawn(id),
                         Err(e) => Command::IllFormated(e)
+                    },
+                    5 => match ShareableType::<usize>::parse(&mut iterator) {
+                        Ok(seed) => Command::ChangeMap(seed),
+                        Err(e) => Command::IllFormated(e)  
                     },
                     _ => Command::Unknown
                 }
@@ -124,8 +129,10 @@ impl Command {
                     .map(|x| *x)
                     .collect()
             ),
-            Command::IllFormated(_) => (5, Vec::new()),
-            Command::Unknown => (6, Vec::new())
+            Command::ChangeMap(seed) => (5, Vec::from(seed.to_string().as_bytes())),
+            
+            Command::IllFormated(_) => (6, Vec::new()),
+            Command::Unknown => (7, Vec::new())
         };
         
         [header].into_iter().chain(body.into_iter()).collect::<Vec<u8>>() 

@@ -15,7 +15,7 @@ pub struct GameSubject {
 
 impl Controlable for GameSubject {
     fn handle_events(&mut self) -> bool {
-        self.slide = self.controls.slide.get_vec() * self.speed;
+        self.slide = self.controls.slide.get_vec() * self.speed * get_frame_time();
         self.orientation = self.controls.look.get_vec();
                 
         self.slide != Vec2::ZERO || self.orientation != Vec2::ZERO
@@ -26,7 +26,7 @@ impl Default for GameSubject {
     fn default() -> Self {
         Self {
             controls: KeyBinding::default(),
-            speed: 10.0,
+            speed: 100.0,
             slide: Vec2::ZERO,
             orientation: Vec2::ZERO
         }

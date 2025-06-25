@@ -10,18 +10,22 @@ use macroquad::prelude::*;
 
 use crate::game::{
     component::*,
-    subject::GameSubject
+    subject::GameSubject,
+    map::Map
 };
 use crate::utils::{ Controlable, Drawable, Dynamic };
 
+use super::server::GameServer;
 use super::{ Protocol, Command, GameAgent };
 
 
 pub struct GameClient {
     network_thread: JoinHandle<()>,
+    
     player: GameComponent,
     others: HashMap<usize, Rect>,
-    has_moved: bool,
+    map: Map,
+    camera: Camera2D,
     
     // Thread safe data
     running: Arc<Mutex<bool>>,
@@ -39,17 +43,14 @@ pub enum ClientConnectionError {
 
 impl Controlable for GameClient {
     fn handle_events(&mut self) -> bool {
-        if self.player.handle_events() {
-            self.has_moved = true;
-            true
-        } else {
-            false
-        }
+        self.player.handle_events()
     }
 }
 
 impl Drawable for GameClient {
     fn draw(&self) {
+        set_camera(&self.camera);
+        
         for (id, r) in self.others.iter() {
             draw_rectangle(
                 r.x,
@@ -57,10 +58,21 @@ impl Drawable for GameClient {
                 r.w,
                 r.h,
                 BLUE);
-            draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, BLUE);
+            draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, YELLOW);
         }
         
         self.player.draw();
+        
+        for room in self.map.rooms.iter() {
+            for wall in room.components
+                .iter()
+                .filter(|x| x.is_some())
+                .map(|x| x.as_ref().unwrap()) {
+                wall.draw()
+            }
+        }
+        
+        set_default_camera();
     }
 }
 
@@ -68,11 +80,16 @@ impl GameAgent for GameClient {}
 
 impl Dynamic for GameClient {
     fn update(&mut self) {
+      
+        let last_pos = self.player.body().position;
         self.player.update();
-        if self.has_moved {
+        let current_pos = self.player.body().position;
+        
+        self.camera.target = Vec2::lerp(self.camera.target, current_pos, 0.1);
+        
+        if current_pos != last_pos {
             if let Ok(mut to_send) = self.to_send.borrow_mut().lock() {
                 to_send.push(Command::Reposition(0, self.player.body().position()));
-                self.has_moved = false;
             }
         }
         
@@ -134,7 +151,8 @@ impl GameClient {
                 )
             ),
             others: HashMap::new(),
-            has_moved: true,
+            map: Default::default(),
+            camera: Camera2D::from_display_rect(Rect { x: 0.0, y: 600.0, w: 800.0, h: -600.0 }),
             running,
             to_send,
             inbox
@@ -186,6 +204,9 @@ impl GameClient {
                 },
                 Command::Despawn(id) => {
                     self.others.remove(&id);
+                },
+                Command::ChangeMap(seed) => {
+                    self.map = Map::generate(GameServer::MAP_WIDTH, GameServer::MAP_HEIGHT, seed);
                 },
                 Command::Unknown => todo!(),
                 Command::IllFormated(_) => todo!()

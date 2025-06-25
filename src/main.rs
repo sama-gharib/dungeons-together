@@ -15,11 +15,15 @@ use game::map::Map;
 #[macroquad::main("Bored")]
 async fn main() {    
     Random::seed();
-    /*let mut app = Application::default();
+    let mut app = Application::default();
     app.run().await;
-    println!("\nFinished !");*/
+    println!("\nFinished !");
     
-    let map = Map::generate(50, 50);
+ 
+}
+
+async fn _map_generation_demo() {
+    let map = Map::generate(50, 50, 0);
     let mut frame_count: usize = 0;
     loop{
         if is_key_pressed(KeyCode::Space) {

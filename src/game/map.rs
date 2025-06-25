@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use auto_with::with;
 
 use std::ops::{BitAnd, BitOr};
 use std::collections::VecDeque;
@@ -9,6 +8,7 @@ use super::object::GameObject;
 use super::body::Body;
 
 use crate::utils::Random;
+use crate::utils::srand;
 
 pub struct Direction {
     flag: AccessFlag,
@@ -108,8 +108,10 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn generate(max_width: usize, max_height: usize) -> Self {
+    
+    pub fn generate(max_width: usize, max_height: usize, seed: usize) -> Self {
         
+        unsafe { srand(seed); }
         
         let mut new_map = Vec::<Room>::new();
         let mut room_matrix: Vec<Vec<bool>> = vec![vec![false; max_width]; max_height];
@@ -120,7 +122,7 @@ impl Map {
         room_matrix[max_height/2][max_width/2] = true;
                   
         loop {
-            match generation_stack.pop_back() {
+            match generation_stack.pop_front() {
                 Some((cursor, constraint)) => {                    
                     let constraint = constraint.opposite();
                     
@@ -183,8 +185,8 @@ pub struct Room {
 }
 
 impl Room {
-    pub const WIDTH:  f32 = 16.0;
-    pub const HEIGHT: f32 = 12.0;
+    pub const WIDTH:  f32 = 800.0;
+    pub const HEIGHT: f32 = 800.0;
     
     pub const VARIANTS: [Self; 7] = [
         Self::H_CORRIDOR,
