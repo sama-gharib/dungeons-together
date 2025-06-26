@@ -188,14 +188,15 @@ impl Room {
     pub const WIDTH:  f32 = 800.0;
     pub const HEIGHT: f32 = 600.0;
     
-    pub const VARIANTS: [Self; 7] = [
+    pub const VARIANTS: [Self; 8] = [
         Self::H_CORRIDOR,
         Self::V_CORRIDOR,
         Self::CROSSROADS,
         Self::T_UP,
         Self::T_LEFT,
         Self::T_DOWN,
-        Self::T_RIGHT
+        Self::T_RIGHT,
+        Self::BLOCKED
     ];
     
     pub const EMPTY: Self = Self {
@@ -271,10 +272,10 @@ impl Room {
     pub const CROSSROADS: Self = Self {
         access_flag: combine_flags!(Direction::UP, Direction::LEFT, Direction::DOWN, Direction::RIGHT),
         components: [
-            wall!(0.0, 0.0, 0.25, 0.25),
-            wall!(0.0, 0.75, 0.25, 0.25),
-            wall!(0.75, 0.0, 0.25, 0.25),
-            wall!(0.75, 0.75, 0.25, 0.25)
+            wall!(0.0, 0.0, 0.05, 0.05),
+            wall!(0.0, 0.95, 0.05, 0.05),
+            wall!(0.95, 0.0, 0.05, 0.05),
+            wall!(0.95, 0.95, 0.05, 0.05)
         ]
     };
     
