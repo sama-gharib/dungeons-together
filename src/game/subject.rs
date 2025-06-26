@@ -26,7 +26,7 @@ impl Default for GameSubject {
     fn default() -> Self {
         Self {
             controls: KeyBinding::default(),
-            speed: 100.0,
+            speed: 50.0,
             slide: Vec2::ZERO,
             orientation: Vec2::ZERO
         }

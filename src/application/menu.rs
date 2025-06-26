@@ -281,8 +281,8 @@ impl MenuVariant {
     fn in_game_menu() -> Widget {
         uilang!(
             <Frame>
-                primary: "WHITE"
-                <Label> text: "Not yet implemented" </Label>
+                primary: "Color::from_rgba(0, 0, 0, 0)"
+                <Label> text: "Work in progress..." primary: "Color::from_rgba(255, 255, 255, 50)" </Label>
                 <Button>
                     id: "back"
                     center: "(0.4, -0.4)"

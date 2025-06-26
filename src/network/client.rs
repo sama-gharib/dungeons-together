@@ -8,6 +8,7 @@ use std::thread::JoinHandle;
 
 use macroquad::prelude::*;
 
+use crate::game::body::Body;
 use crate::game::{
     component::*,
     subject::GameSubject,
@@ -60,7 +61,6 @@ impl Drawable for GameClient {
                 BLUE);
             draw_text(&id.to_string(), r.x + 10.0, r.y + 10.0, 13.0, YELLOW);
         }
-        
         self.player.draw();
         
         for room in self.map.rooms.iter() {
@@ -80,12 +80,24 @@ impl GameAgent for GameClient {}
 
 impl Dynamic for GameClient {
     fn update(&mut self) {
-      
+                
         let last_pos = self.player.body().position;
+        // Collisions
+        self.player.collisions(
+            self.map.rooms
+                .iter()
+                .map(|x| &x.components)
+                .flatten()
+                .filter_map(|x| match x {
+                    Some(x) => Some(x),
+                    None => None
+                }),
+            false
+        );
         self.player.update();
         let current_pos = self.player.body().position;
         
-        self.camera.target = Vec2::lerp(self.camera.target, current_pos, 0.1);
+        self.camera.target = Vec2::lerp(self.camera.target, current_pos + self.player.body().size() / 2.0, 0.1);
         
         if current_pos != last_pos {
             if let Ok(mut to_send) = self.to_send.borrow_mut().lock() {

@@ -14,7 +14,7 @@ impl Default for Body {
     fn default() -> Self {
         Self {
             position: Vec2::ZERO,
-            size: Vec2::ONE * 100.0,
+            size: Vec2::ONE * 50.0,
             velocity: Vec2::ZERO,
             friction_factor: 1.0
         }
@@ -24,6 +24,8 @@ impl Default for Body {
 impl Body {
     
     with!(friction_factor : f32);
+    with!(position: Vec2);
+    with!(size: Vec2);
     
     pub fn slide(&mut self) {
         self.position += self.velocity;

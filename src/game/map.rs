@@ -135,7 +135,7 @@ impl Map {
                         continue;
                     }
                     
-                    let new_room = new_room.unwrap().with_indices(cursor.0, cursor.1);
+                    let new_room = new_room.unwrap().with_indices(cursor.0 as i32 - max_height as i32 / 2, cursor.1 as i32 - max_height as i32 / 2);
                     new_map.push(new_room.clone());
                     
                     for (direction, flag) in new_room.access_flag.directions() {
@@ -186,7 +186,7 @@ pub struct Room {
 
 impl Room {
     pub const WIDTH:  f32 = 800.0;
-    pub const HEIGHT: f32 = 800.0;
+    pub const HEIGHT: f32 = 600.0;
     
     pub const VARIANTS: [Self; 7] = [
         Self::H_CORRIDOR,
@@ -288,7 +288,7 @@ impl Room {
         ]
     };
     
-    pub fn with_indices(mut self, line: usize, column: usize) -> Self {
+    pub fn with_indices(mut self, line: i32, column: i32) -> Self {
         for e in self.components.iter_mut() {
             if let Some(wall) = e {
                 wall.body.position.x += column as f32 * Room::WIDTH;

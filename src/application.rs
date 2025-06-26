@@ -20,15 +20,15 @@ impl Application {
     pub async fn run(&mut self) {
         loop {
             
-            let last = self.ui.get_current();
-            self.ui.tick();
-            let current = self.ui.get_current_mut();
-            
             if let Some(game) = &mut self.game {
                 game.handle_events();
                 game.update();
                 game.draw();
             }
+            
+            let last = self.ui.get_current();
+            self.ui.tick();
+            let current = self.ui.get_current_mut();
             
             // UI transitions special behaviours
             match (last, current.clone()) {
