@@ -6,6 +6,7 @@ use crate::utils::{ Dynamic, Drawable, Controlable };
 use super::controller::Controller;
 use super::controller::Movement;
 use super::keys::KeyBinding;
+use super::map::Map;
 use super::subject::*;
 use super::object::*;
 use super::body::*;
@@ -35,6 +36,7 @@ impl Drawable for GameComponent {
     fn draw(&self) {
         let color = match &self.object {
             GameObject::Player => BLUE,
+            GameObject::Monster => MAGENTA,
             GameObject::CheckPoint {..} => GREEN,
             GameObject::Wall => RED,
             GameObject::Projectile => YELLOW
@@ -56,15 +58,6 @@ impl Dynamic for GameComponent {
     }
 }
 
-impl Controlable for GameComponent {
-    fn handle_events(&mut self) -> bool {
-        let movement = self.controller.get_movement();
-        
-        self.body.impulse(movement.velocity);
-        
-        movement.velocity != Vec2::ZERO && movement.orientation != Vec2::ZERO
-    }
-}
 
 impl From<GameObject> for GameComponent {
     fn from(o: GameObject) -> Self {
@@ -73,7 +66,7 @@ impl From<GameObject> for GameComponent {
                 GameObject::Wall => Body::default(),
                 GameObject::Projectile => todo!(),
                 GameObject::CheckPoint { .. } => todo!(),
-                GameObject::Player => Body::default()
+                GameObject::Player | GameObject::Monster => Body::default()
                     .with_friction_factor(0.9)
             },
             controller: if let GameObject::Player = o {
@@ -88,6 +81,12 @@ impl From<GameObject> for GameComponent {
 
 impl GameComponent {
     with!{ body: Body }
+    
+    pub fn slide(&mut self, map: &Map) {
+        let movement = self.controller.get_movement(self.body.position, map);
+        
+        self.body.impulse(movement.velocity);
+    }
     
     pub fn collisions<'a>(&mut self, others: impl Iterator<Item=&'a GameComponent>, only_check: bool) -> Vec<Collider<'a>> {
         let mut collided_with = Vec::<Collider>::new();

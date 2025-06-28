@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use super::keys::KeyBinding;
+use super::{component::GameComponent, keys::KeyBinding, map::Map};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Movement {
@@ -26,7 +26,7 @@ impl Default for Controller {
 }
 
 impl Controller {
-    pub fn get_movement(&mut self) -> Movement {
+    pub fn get_movement(&mut self, from: Vec2, world: &Map) -> Movement {
         let mut movement = Movement::default();
         match self {
             Self::Player { controls, speed } => {
@@ -34,7 +34,7 @@ impl Controller {
                 movement.orientation = controls.look.get_vec();
             },
             Self::Monster => {
-                todo!()
+                movement.velocity = vec2(10.0, 0.0);
             },
             Self::BrainDead => {}
         }

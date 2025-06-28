@@ -4,6 +4,9 @@ use std::net::{ TcpListener, TcpStream };
 use std::io::{ Write, Error };
 use std::collections::VecDeque;
 
+use crate::game::component::GameComponent;
+use crate::game::map::Map;
+use crate::game::object::GameObject;
 use crate::utils::{ Controlable, Drawable, Dynamic };
 use crate::utils::{ base_format, Random, Time };
 
@@ -22,6 +25,8 @@ pub struct GameServer {
     clients: Vec<Client>,
     
     map_seed: usize,
+    map: Map,
+    monster: GameComponent,
     
     to_broadcast: VecDeque<(Command, usize)>,
     to_send: VecDeque<(Command, usize)>,
@@ -33,6 +38,8 @@ impl GameAgent for GameServer { }
 
 impl Controlable for GameServer {
     fn handle_events(&mut self) -> bool {
+        self.monster.slide(&self.map);
+        
         false
     }
 }
@@ -52,6 +59,10 @@ impl Dynamic for GameServer {
         print!("\rbroadcast queue length: {}                        ", self.to_broadcast.len());
         let _ = std::io::stdout().flush();
         
+        if Random::max(30) == 0 {
+            self.to_broadcast.push_back((Command::Reposition(0, self.monster.body.position), 0));
+        }
+        
         self.accept_connection();
         self.receive_message();
         self.broadcast();
@@ -68,10 +79,14 @@ impl GameServer {
         let listener = TcpListener::bind(connection_string)?;
         listener.set_nonblocking(true)?;
         
+        let seed = Random::any();
+        
         Ok(Self {
             listener,
             clients: Default::default(),
-            map_seed: Random::any(),
+            map_seed: seed,
+            map: Map::generate(Self::MAP_WIDTH, Self::MAP_HEIGHT, seed),
+            monster: GameComponent::from(GameObject::Monster),
             to_broadcast: Default::default(),
             to_send: Default::default(),
             connection_string: connection_string.to_string()
@@ -81,10 +96,10 @@ impl GameServer {
     pub fn accept_connection(&mut self) {
         if let Ok(new_client) =  self.listener.accept() {
             if let Ok(()) = new_client.0.set_nonblocking(true) {
-                //self.log(&format!("New client connected : {}", new_client.1));
                 
                 let new_id = Random::any();
                 self.log(&format!("New client connected : {}", new_id));
+                self.to_send.push_back((Command::Spawn(0), new_id));
                 self.to_send.push_back((Command::ChangeMap(self.map_seed), new_id));
                 for client in self.clients.iter() {
                     self.to_send.push_back((Command::Spawn(client.id), new_id));

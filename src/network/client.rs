@@ -43,7 +43,8 @@ pub enum ClientConnectionError {
 
 impl Controlable for GameClient {
     fn handle_events(&mut self) -> bool {
-        self.player.handle_events()
+        self.player.slide(&self.map);
+        true
     }
 }
 
@@ -206,7 +207,7 @@ impl GameClient {
         if let Some(command) = self.inbox.borrow_mut().lock().unwrap().pop() {
             match command {
                 Command::Spawn(id) => {
-                    self.others.insert(id, Rect { x: 100.0, y: 100.0, w: 100.0, h: 100.0 });
+                    self.others.insert(id, Rect { x: 0.0, y: 0.0, w: 50.0, h: 50.0 });
                 },
                 Command::Reposition(id, pos) => if let Some(other) = self.others.get_mut(&id) {
                     let before = other.point();
