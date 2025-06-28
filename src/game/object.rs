@@ -2,6 +2,7 @@ use crate::utils::Drawable;
 
 #[derive(Debug, Clone)]
 pub enum GameObject {
+    Player,
     CheckPoint { priority: usize },
     Wall,
     Projectile

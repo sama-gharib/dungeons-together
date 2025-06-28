@@ -3,9 +3,11 @@ use macroquad::prelude::*;
 use std::ops::{BitAnd, BitOr};
 use std::collections::VecDeque;
 
-use super::component::{ GameComponent, GameComponentVariant };
+use super::component::GameComponent;
 use super::object::GameObject;
 use super::body::Body;
+use super::controller::Controller;
+use super::keys::KeyBinding;
 
 use crate::network::server::GameServer;
 use crate::utils::Random;
@@ -196,9 +198,8 @@ macro_rules! wall {
                     friction_factor: 1.0,
                     velocity: Vec2::ZERO
                 },
-                variant: GameComponentVariant::Object(
-                    GameObject::Wall
-                )
+                object: GameObject::Wall,
+                controller: Controller::BrainDead
           }
         )
     };

@@ -3,6 +3,9 @@ use auto_with::with;
 
 use crate::utils::{ Dynamic, Drawable, Controlable };
 
+use super::controller::Controller;
+use super::controller::Movement;
+use super::keys::KeyBinding;
 use super::subject::*;
 use super::object::*;
 use super::body::*;
@@ -22,31 +25,19 @@ pub struct Collider<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub enum GameComponentVariant {
-    Subject (GameSubject),
-    Object (GameObject)
-}
-
-impl Controlable for GameComponentVariant {
-    fn handle_events(&mut self) -> bool {
-        match self {
-            Self::Subject(subject) => subject.handle_events(),
-            Self::Object(_) => { false }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct GameComponent {
     pub body: Body,
-    pub variant: GameComponentVariant
+    pub object: GameObject,
+    pub controller: Controller
 }
 
 impl Drawable for GameComponent {
     fn draw(&self) {
-        let color = match &self.variant {
-            GameComponentVariant::Subject(_subject) => BLUE,
-            GameComponentVariant::Object(_object) => RED
+        let color = match &self.object {
+            GameObject::Player => BLUE,
+            GameObject::CheckPoint {..} => GREEN,
+            GameObject::Wall => RED,
+            GameObject::Projectile => YELLOW
         };
         
         draw_rectangle(
@@ -67,24 +58,30 @@ impl Dynamic for GameComponent {
 
 impl Controlable for GameComponent {
     fn handle_events(&mut self) -> bool {
-        let r = self.variant.handle_events();
-        if let GameComponentVariant::Subject (subject) = &self.variant {
-            self.body.impulse(subject.slide());
-        }
+        let movement = self.controller.get_movement();
         
-        r
+        self.body.impulse(movement.velocity);
+        
+        movement.velocity != Vec2::ZERO && movement.orientation != Vec2::ZERO
     }
 }
 
-impl From<GameComponentVariant> for GameComponent {
-    fn from(s: GameComponentVariant) -> Self {
+impl From<GameObject> for GameComponent {
+    fn from(o: GameObject) -> Self {
         Self {
-            body: match s {
-                GameComponentVariant::Object(_) => Body::default(),
-                GameComponentVariant::Subject(_) => Body::default()
+            body: match o {
+                GameObject::Wall => Body::default(),
+                GameObject::Projectile => todo!(),
+                GameObject::CheckPoint { .. } => todo!(),
+                GameObject::Player => Body::default()
                     .with_friction_factor(0.9)
             },
-            variant: s
+            controller: if let GameObject::Player = o {
+                Controller::Player { controls: KeyBinding::default(), speed: 100.0 }
+            } else {
+                Controller::BrainDead
+            },
+            object: o,
         }
     }
 }

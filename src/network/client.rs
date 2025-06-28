@@ -8,10 +8,9 @@ use std::thread::JoinHandle;
 
 use macroquad::prelude::*;
 
-use crate::game::body::Body;
+use crate::game::object::GameObject;
 use crate::game::{
     component::*,
-    subject::GameSubject,
     map::Map
 };
 use crate::utils::{ Controlable, Drawable, Dynamic };
@@ -100,7 +99,7 @@ impl Dynamic for GameClient {
         self.player.update();
         let current_pos = self.player.body().position;
         
-        self.camera.target = Vec2::lerp(self.camera.target, current_pos + self.player.body().size() / 2.0, 0.1);
+        self.camera.target = Vec2::lerp(self.camera.target, current_pos + self.player.body().size() / 2.0, 0.3);
         
         if current_pos != last_pos {
             if let Ok(mut to_send) = self.to_send.borrow_mut().lock() {
@@ -161,9 +160,7 @@ impl GameClient {
         Ok(Self {
             network_thread,
             player: GameComponent::from(
-                GameComponentVariant::Subject(
-                    GameSubject::default()
-                )
+                GameObject::Player
             ),
             others: HashMap::new(),
             map: Default::default(),
