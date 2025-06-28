@@ -18,6 +18,7 @@ This game will be a multiplayer 2D dungeon crawler.
 
 ## What's being done ?
 
+1. Server multithreading
 1. The game in itself
 
 ## What's to do ?
