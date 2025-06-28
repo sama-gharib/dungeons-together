@@ -63,7 +63,7 @@ impl Drawable for GameClient {
         }
         self.player.draw();
         
-        for room in self.map.rooms.iter() {
+        for room in self.map.get_rooms_iterator() {
             for wall in room.components
                 .iter()
                 .filter(|x| x.is_some())
@@ -84,14 +84,17 @@ impl Dynamic for GameClient {
         let last_pos = self.player.body().position;
         // Collisions
         self.player.collisions(
-            self.map.rooms
-                .iter()
-                .map(|x| &x.components)
+            self.map
+                .get_rooms_iterator()
+                .map(|room| &room.components)
                 .flatten()
-                .filter_map(|x| match x {
-                    Some(x) => Some(x),
-                    None => None
-                }),
+                .filter_map(|x|
+                    if let Some(component) = &x {
+                        Some(component)
+                    } else {
+                        None
+                    }
+                ),
             false
         );
         self.player.update();

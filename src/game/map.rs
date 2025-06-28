@@ -7,6 +7,7 @@ use super::component::{ GameComponent, GameComponentVariant };
 use super::object::GameObject;
 use super::body::Body;
 
+use crate::network::server::GameServer;
 use crate::utils::Random;
 use crate::utils::srand;
 
@@ -104,22 +105,41 @@ impl AccessFlag {
 
 #[derive(Debug, Default)]
 pub struct Map {
-    pub rooms: Vec<Room>
+    pub rooms: Vec<Vec<Chunk>>
+}
+
+#[derive(Clone, Debug)]
+pub enum Chunk {
+    Uninitialized,
+    InQueue,
+    Generated (Room)
 }
 
 impl Map {
+    
+    pub fn get_rooms_iterator(&self) -> impl Iterator<Item = &Room> {
+        self.rooms
+            .iter()
+            .flatten()
+            .filter_map(|x|
+                if let Chunk::Generated(room) = x {
+                    Some(room)
+                } else {
+                    None
+                }
+            )
+    }
     
     pub fn generate(max_width: usize, max_height: usize, seed: usize) -> Self {
         
         unsafe { srand(seed); }
         
-        let mut new_map = Vec::<Room>::new();
-        let mut room_matrix: Vec<Vec<bool>> = vec![vec![false; max_width]; max_height];
+        let mut room_matrix: Vec<Vec<Chunk>> = vec![vec![Chunk::Uninitialized; max_width]; max_height];
         // Using a VecDeque rather than a Vec enables to easily switch from DFS to BFS 
         let mut generation_stack = VecDeque::<((usize, usize), AccessFlag)>::new();
         
         generation_stack.push_back(((max_height/2, max_width/2), Direction::UP.flag));
-        room_matrix[max_height/2][max_width/2] = true;
+        room_matrix[max_height/2][max_width/2] = Chunk::Generated(Room::CROSSROADS);
                   
         loop {
             match generation_stack.pop_front() {
@@ -135,8 +155,7 @@ impl Map {
                         continue;
                     }
                     
-                    let new_room = new_room.unwrap().with_indices(cursor.0 as i32 - max_height as i32 / 2, cursor.1 as i32 - max_height as i32 / 2);
-                    new_map.push(new_room.clone());
+                    let new_room = new_room.unwrap();
                     
                     for (direction, flag) in new_room.access_flag.directions() {
                         let mut next_coord = (cursor.0 as i32 + direction.0, cursor.1 as i32 + direction.1);
@@ -144,18 +163,25 @@ impl Map {
                         next_coord.1 = next_coord.1.min(max_width as i32 - 1).max(0);
                         let next_coord = (next_coord.0 as usize, next_coord.1 as usize);
                         
-                        if !room_matrix[next_coord.0][next_coord.1] {
+                        if let Chunk::Uninitialized = room_matrix[next_coord.0][next_coord.1] {
                             generation_stack.push_back((next_coord, flag));
-                            room_matrix[next_coord.0][next_coord.1] = true;
+                            room_matrix[next_coord.0][next_coord.1] = Chunk::InQueue;
                         }
-                    }
+                    }    
+                    
+                    room_matrix[cursor.0][cursor.1] = Chunk::Generated(
+                        new_room.with_indices(
+                            cursor.0 as i32 - GameServer::MAP_HEIGHT as i32 / 2, 
+                            cursor.1 as i32 - GameServer::MAP_WIDTH as i32 / 2
+                        )
+                    );             
                 },
                 None => break
             }
         }
                 
         Map {
-            rooms: new_map
+            rooms: room_matrix
         }
     }
 }

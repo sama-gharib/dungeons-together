@@ -10,7 +10,7 @@ mod network;
 mod game;
 mod application;
 
-use game::map::Map;
+use game::map::{ Map, Chunk };
 
 #[macroquad::main("Bored")]
 async fn main() {    
@@ -30,7 +30,7 @@ async fn _map_generation_demo() {
             frame_count = 0;
         }
         
-        for room in map.rooms.iter().take(frame_count*10) {
+        for room in map.get_rooms_iterator() {
             for component in room.components.iter() {
                 if let Some(component) = component {
                     component.draw();

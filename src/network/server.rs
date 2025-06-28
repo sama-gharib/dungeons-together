@@ -60,7 +60,6 @@ impl Dynamic for GameServer {
 }
 
 impl GameServer {
-    const SOCKET_DELAY: u64 = 16;
     
     pub const MAP_WIDTH: usize = 50;
     pub const MAP_HEIGHT: usize = 50;
