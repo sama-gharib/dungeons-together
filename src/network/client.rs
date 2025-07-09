@@ -151,7 +151,7 @@ impl GameClient {
                 Err(e) => match e.kind() {
                     ErrorKind::TimedOut => return Err(ClientConnectionError::ElapsedTimeout),
                     ErrorKind::ConnectionRefused => return Err(ClientConnectionError::ServerRefused),
-                    _ => panic!("Unahandled client connection error !")
+                    _ => panic!("Unhandled client connection error !")
                 }
             };
             
@@ -214,6 +214,8 @@ impl GameClient {
                     let after = before + (pos - before) / 4.0;
                     other.x = after.x;
                     other.y = after.y;
+                } else {
+                    self.others.insert(id, Rect { x: pos.x, y: pos.y, w: 50.0, h: 50.0 });
                 },
                 Command::Despawn(id) => {
                     self.others.remove(&id);
